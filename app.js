@@ -228,3 +228,25 @@ function limpiarFormulario() {
   calcularTarifaTotal();
   btnLimpiar.style.display = 'none';
 }
+// --- FUNCIÓN PARA CAMBIAR ENTRE VISTAS DEL MENÚ ---
+window.cambiarVista = function(nombreVista) {
+  // 1. Ocultar todas las vistas
+  const vistas = document.querySelectorAll('.seccion-vista');
+  vistas.forEach(v => v.style.display = 'none');
+
+  // 2. Quitar la clase "active" de todos los botones del menú
+  const itemsMenu = document.querySelectorAll('.menu-item');
+  itemsMenu.forEach(item => item.classList.remove('active'));
+
+  // 3. Mostrar la vista elegida y activar su botón
+  if (nombreVista === 'padron') {
+    document.getElementById('vista-padron').style.display = 'block';
+    document.getElementById('btn-menu-padron').classList.add('active');
+  } else if (nombreVista === 'matriz') {
+    document.getElementById('vista-matriz').style.display = 'block';
+    document.getElementById('btn-menu-matriz').classList.add('active');
+  } else if (nombreVista === 'cortes') {
+    document.getElementById('vista-cortes').style.display = 'block';
+    document.getElementById('btn-menu-cortes').classList.add('active');
+  }
+};
