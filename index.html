@@ -297,21 +297,41 @@
     });
 
     // 📡 LEER DESDE SUPABASE
-   // 📡 LEER DESDE SUPABASE (Aumentado para ver hasta 2000 registros)
+   // 📡 LEER DESDE SUPABASE (Paginación automática para traer MÁS de 200 registros)
     async function cargarUsuariosDesdeSupabase() {
-      const { data, error } = await _supabase
-        .from('contribuyentes')
-        .select('*')
-        .range(0, 1999) // 👈 AQUÍ AUMENTAS EL LÍMITE (De 0 a 1999 trae 2000 datos)
-        .order('nombre', { ascending: true });
+      let todosLosUsuarios = [];
+      let desde = 0;
+      const paso = 200; // Bloques de 200 en 200
+      let hayMasDatos = true;
 
-      if (error) {
-        console.error('Error al cargar datos de Supabase:', error);
-        alert('Error al conectar con Supabase: ' + error.message);
-        return;
+      while (hayMasDatos) {
+        const { data, error } = await _supabase
+          .from('contribuyentes')
+          .select('*')
+          .range(desde, desde + paso - 1)
+          .order('nombre', { ascending: true });
+
+        if (error) {
+          console.error('Error al cargar datos de Supabase:', error);
+          alert('Error al conectar con Supabase: ' + error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          todosLosUsuarios = todosLosUsuarios.concat(data);
+          desde += paso;
+          
+          // Si trajo menos de 200 registros, significa que ya no hay más
+          if (data.length < paso) {
+            hayMasDatos = false;
+          }
+        } else {
+          hayMasDatos = false;
+        }
       }
 
-      usuarios = data.map(u => ({
+      // Asignar los datos recopilados
+      usuarios = todosLosUsuarios.map(u => ({
         ...u,
         servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
         pagos: u.pagos || new Array(12).fill(0)
