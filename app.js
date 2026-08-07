@@ -1,7 +1,8 @@
 // 1. Configuración de Supabase
-const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
-const SUPABASE_KEY = 'sb_publishable__py_2VbWJSOU_1BRqQdR7w_Yp4uZ5-p';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+ // ⚙️ CREDENCIALES CONFIGURADAS
+    const SUPABASE_URL = 'https://epjwgnjaxguzlrmsvtuq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable__py_2VbWJSOU_1BRqQdR7w_Yp4uZ5-p';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Variables Globales
 let contribuyentes = [];
