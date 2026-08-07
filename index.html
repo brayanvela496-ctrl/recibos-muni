@@ -336,7 +336,7 @@ async function cargarUsuariosDesdeSupabase() {
   // Asignar los datos recopilados
   usuarios = todosLosUsuarios.map(u => ({
     ...u,
-    servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
+    servicios: u.servicios || { agua: 05, desague: 05, limpieza: 05 },
     pagos: u.pagos || new Array(12).fill(0)
   }));
 
