@@ -21,15 +21,15 @@
       </div>
 
       <nav class="menu">
-        <a href="#" class="menu-item active" id="btn-menu-padron">
+        <a href="#" class="menu-item active" id="btn-menu-padron" onclick="cambiarVista('padron'); return false;">
           <span class="icon">👥</span>
           Padrón de Usuarios
         </a>
-        <a href="#" class="menu-item" id="btn-menu-matriz">
+        <a href="#" class="menu-item" id="btn-menu-matriz" onclick="cambiarVista('matriz'); return false;">
           <span class="icon">📅</span>
           Matriz de Pagos
         </a>
-        <a href="#" class="menu-item" id="btn-menu-cortes">
+        <a href="#" class="menu-item" id="btn-menu-cortes" onclick="cambiarVista('cortes'); return false;">
           <span class="icon">✂️</span>
           Órdenes de Corte
         </a>
@@ -42,103 +42,130 @@
 
     <!-- Contenido Principal -->
     <main class="main-content">
-      <header class="top-header">
-        <h1>Padrón de Contribuyentes</h1>
-        <button class="btn-primary" id="btn-imprimir-pendientes">
-          Imprimir Recibos Pendientes
-        </button>
-      </header>
 
-      <!-- Formulario para Registrar / Editar -->
-      <section class="card">
-        <h3>Registrar / Editar Contribuyente</h3>
-        <form id="form-contribuyente">
-          <input type="hidden" id="edit-id" value="" />
+      <!-- VISTA 1: PADRÓN DE USUARIOS -->
+      <div id="vista-padron" class="seccion-vista">
+        <header class="top-header">
+          <h1>Padrón de Contribuyentes</h1>
+          <button class="btn-primary" id="btn-imprimir-pendientes">
+            Imprimir Recibos Pendientes
+          </button>
+        </header>
 
-          <div class="form-grid-3">
-            <div class="form-group">
-              <label for="suministro">N° Suministro</label>
-              <input type="text" id="suministro" placeholder="0000000001" required />
+        <!-- Formulario para Registrar / Editar -->
+        <section class="card">
+          <h3>Registrar / Editar Contribuyente</h3>
+          <form id="form-contribuyente">
+            <input type="hidden" id="edit-id" value="" />
+
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="suministro">N° Suministro</label>
+                <input type="text" id="suministro" placeholder="0000000001" required />
+              </div>
+
+              <div class="form-group">
+                <label for="nombre">Nombre Completo</label>
+                <input type="text" id="nombre" placeholder="APELLIDOS Y NOMBRES" required />
+              </div>
+
+              <div class="form-group">
+                <label for="direccion">Dirección</label>
+                <input type="text" id="direccion" placeholder="JR. LIMA N° 204" required />
+              </div>
             </div>
 
-            <div class="form-group">
-              <label for="nombre">Nombre Completo</label>
-              <input type="text" id="nombre" placeholder="APELLIDOS Y NOMBRES" required />
+            <!-- Selección de Servicios -->
+            <div class="services-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-agua" checked />
+                <span>Agua Potable (S/.)</span>
+                <input type="number" id="costo-agua" value="10.00" step="0.50" min="0" />
+              </label>
+
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-desague" checked />
+                <span>Desagüe (S/.)</span>
+                <input type="number" id="costo-desague" value="3.00" step="0.50" min="0" />
+              </label>
+
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-limpieza" checked />
+                <span>Limpieza (S/.)</span>
+                <input type="number" id="costo-limpieza" value="2.00" step="0.50" min="0" />
+              </label>
             </div>
 
-            <div class="form-group">
-              <label for="direccion">Dirección</label>
-              <input type="text" id="direccion" placeholder="JR. LIMA N° 204" required />
+            <div class="form-footer">
+              <div class="total-badge">
+                Tarifa Mensual Calculada: <strong id="total-calculado">S/. 15.00</strong>
+              </div>
+              <div class="button-group">
+                <button type="button" class="btn-secondary" id="btn-limpiar" style="display: none;">Cancelar</button>
+                <button type="submit" class="btn-success" id="btn-guardar">Guardar Usuario</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Tabla / Lista General -->
+        <section class="card">
+          <div class="card-header">
+            <h3>Lista General de Registrados</h3>
+            <div class="filter-group">
+              <label for="filtro-deuda">Filtrar por Deuda:</label>
+              <select id="filtro-deuda">
+                <option value="todos">Todos los usuarios</option>
+                <option value="morosos">Solo Morosos</option>
+                <option value="aldia">Al día</option>
+              </select>
             </div>
           </div>
 
-          <!-- Selección de Servicios -->
-          <div class="services-row">
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-agua" checked />
-              <span>Agua Potable (S/.)</span>
-              <input type="number" id="costo-agua" value="10.00" step="0.50" min="0" />
-            </label>
-
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-desague" checked />
-              <span>Desagüe (S/.)</span>
-              <input type="number" id="costo-desague" value="3.00" step="0.50" min="0" />
-            </label>
-
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-limpieza" checked />
-              <span>Limpieza (S/.)</span>
-              <input type="number" id="costo-limpieza" value="2.00" step="0.50" min="0" />
-            </label>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SUMINISTRO</th>
+                  <th>CONTRIBUYENTE</th>
+                  <th>DIRECCIÓN</th>
+                  <th>MESES DEUDA</th>
+                  <th>ESTADO</th>
+                  <th>ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-body">
+                <tr>
+                  <td colspan="6" class="text-center">Cargando contribuyentes desde Supabase...</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </section>
+      </div>
 
-          <div class="form-footer">
-            <div class="total-badge">
-              Tarifa Mensual Calculada: <strong id="total-calculado">S/. 15.00</strong>
-            </div>
-            <div class="button-group">
-              <button type="button" class="btn-secondary" id="btn-limpiar" style="display: none;">Cancelar</button>
-              <button type="submit" class="btn-success" id="btn-guardar">Guardar Usuario</button>
-            </div>
-          </div>
-        </form>
-      </section>
+      <!-- VISTA 2: MATRIZ DE PAGOS -->
+      <div id="vista-matriz" class="seccion-vista" style="display: none;">
+        <header class="top-header">
+          <h1>Matriz de Pagos Mensuales</h1>
+        </header>
+        <section class="card">
+          <h3>Control Anual de Pagos</h3>
+          <p>Módulo de registro y consulta de pagos mensuales por contribuyente (Enero - Diciembre).</p>
+        </section>
+      </div>
 
-      <!-- Tabla / Lista General -->
-      <section class="card">
-        <div class="card-header">
-          <h3>Lista General de Registrados</h3>
-          <div class="filter-group">
-            <label for="filtro-deuda">Filtrar por Deuda:</label>
-            <select id="filtro-deuda">
-              <option value="todos">Todos los usuarios</option>
-              <option value="morosos">Solo Morosos</option>
-              <option value="aldia">Al día</option>
-            </select>
-          </div>
-        </div>
+      <!-- VISTA 3: ÓRDENES DE CORTE -->
+      <div id="vista-cortes" class="seccion-vista" style="display: none;">
+        <header class="top-header">
+          <h1>Órdenes de Corte de Servicio</h1>
+        </header>
+        <section class="card">
+          <h3>Usuarios con Suspensión del Servicio</h3>
+          <p>Relación de contribuyentes morosos notificados para corte de agua y desagüe.</p>
+        </section>
+      </div>
 
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>SUMINISTRO</th>
-                <th>CONTRIBUYENTE</th>
-                <th>DIRECCIÓN</th>
-                <th>MESES DEUDA</th>
-                <th>ESTADO</th>
-                <th>ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-body">
-              <tr>
-                <td colspan="6" class="text-center">Cargando contribuyentes desde Supabase...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
     </main>
   </div>
 
