@@ -281,63 +281,53 @@
   <div id="print-area" class="hidden"></div>
 
   <!-- LÓGICA JAVASCRIPT CON SUPABASE -->
-  <script>
-    // ⚙️ CREDENCIALES CONFIGURADAS
-    const SUPABASE_URL = 'https://epjwgnjaxguzlrmsvtuq.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable__py_2VbWJSOU_1BRqQdR7w_Yp4uZ5-p';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+ <script>
     let usuarios = [];
+    const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre"];
 
-    document.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
-      calcularTarifaTotalForm();
-      cargarUsuariosDesdeSupabase();
-    });
-
-    // 📡 LEER DESDE SUPABASE
-   // 📡 LEER DESDE SUPABASE (Paginación automática para traer MÁS de 200 registros)
+    // 📡 LEER DESDE SUPABASE (Garantiza cargar MÁS de 200 registros de forma fluida)
     async function cargarUsuariosDesdeSupabase() {
       let todosLosUsuarios = [];
       let desde = 0;
-      const paso = 200; // Bloques de 200 en 200
-      let hayMasDatos = true;
+      const limite = 1000; // Pide en bloques grandes de 1000
+      let continuar = true;
 
-      while (hayMasDatos) {
-        const { data, error } = await _supabase
-          .from('contribuyentes')
-          .select('*')
-          .range(desde, desde + paso - 1)
-          .order('nombre', { ascending: true });
+      try {
+        while (continuar) {
+          const { data, error } = await _supabase
+            .from('contribuyentes')
+            .select('*')
+            .range(desde, desde + limite - 1)
+            .order('id', { ascending: true });
 
-        if (error) {
-          console.error('Error al cargar datos de Supabase:', error);
-          alert('Error al conectar con Supabase: ' + error.message);
-          return;
-        }
+          if (error) throw error;
 
-        if (data && data.length > 0) {
-          todosLosUsuarios = todosLosUsuarios.concat(data);
-          desde += paso;
-          
-          // Si trajo menos de 200 registros, significa que ya no hay más
-          if (data.length < paso) {
-            hayMasDatos = false;
+          if (data && data.length > 0) {
+            todosLosUsuarios = todosLosUsuarios.concat(data);
+            desde += data.length;
+
+            // Si devolvió menos del límite solicitado, ya trajimos todo de la BD
+            if (data.length < limite) {
+              continuar = false;
+            }
+          } else {
+            continuar = false;
           }
-        } else {
-          hayMasDatos = false;
         }
+
+        usuarios = todosLosUsuarios.map(u => ({
+          ...u,
+          servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
+          pagos: u.pagos || new Array(12).fill(0)
+        }));
+
+        console.log(`✅ Total de contribuyentes cargados exitosamente: ${usuarios.length}`);
+        renderAll();
+
+      } catch (err) {
+        console.error('Error al cargar datos de Supabase:', err);
+        alert('Error al conectar con Supabase: ' + err.message);
       }
-
-      // Asignar los datos recopilados
-      usuarios = todosLosUsuarios.map(u => ({
-        ...u,
-        servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
-        pagos: u.pagos || new Array(12).fill(0)
-      }));
-
-      renderAll();
     }
 
     function getTarifaTotal(user) {
@@ -346,7 +336,7 @@
     }
 
     function contarMesesDeuda(user) {
-      if(!user.pagos) return 12;
+      if (!user.pagos) return 12;
       return user.pagos.filter(monto => monto === 0).length;
     }
 
@@ -426,8 +416,10 @@
           .eq('id', editId);
 
         if (error) alert('Error al actualizar: ' + error.message);
-        else cancelarEdicion();
-
+        else {
+          cancelarEdicion();
+          cargarUsuariosDesdeSupabase();
+        }
       } else {
         const { error } = await _supabase
           .from('contribuyentes')
@@ -440,15 +432,16 @@
           }]);
 
         if (error) alert('Error al registrar: ' + error.message);
-        else document.getElementById('form-user').reset();
+        else {
+          document.getElementById('form-user').reset();
+          cargarUsuariosDesdeSupabase();
+        }
       }
-
-      cargarUsuariosDesdeSupabase();
     }
 
     async function actualizarPago(userId, mesIdx, valor) {
       const user = usuarios.find(u => u.id === userId);
-      if(user) {
+      if (user) {
         const nuevosPagos = [...user.pagos];
         nuevosPagos[mesIdx] = parseFloat(valor) || 0;
 
@@ -457,16 +450,25 @@
           .update({ pagos: nuevosPagos })
           .eq('id', userId);
 
-        if(error) alert('Error guardando pago: ' + error.message);
-        else cargarUsuariosDesdeSupabase();
+        if (error) {
+          alert('Error guardando pago: ' + error.message);
+        } else {
+          // Actualizamos localmente para fluidez instantánea sin recargar la base de datos entera
+          user.pagos = nuevosPagos;
+          renderAll();
+        }
       }
     }
 
     async function eliminarUsuario(id) {
-      if(confirm('¿Seguro que deseas eliminar este contribuyente de Supabase?')) {
+      if (confirm('¿Seguro que deseas eliminar este contribuyente de Supabase?')) {
         const { error } = await _supabase.from('contribuyentes').delete().eq('id', id);
-        if(error) alert('Error al eliminar: ' + error.message);
-        else cargarUsuariosDesdeSupabase();
+        if (error) {
+          alert('Error al eliminar: ' + error.message);
+        } else {
+          usuarios = usuarios.filter(u => u.id !== id);
+          renderAll();
+        }
       }
     }
 
@@ -733,6 +735,6 @@
       window.print();
       printArea.classList.add('hidden');
     }
-  </script>
+</script>
 </body>
 </html>
