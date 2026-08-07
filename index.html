@@ -1,177 +1,716 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Muni San Roque - Recibos & Tributación</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- SDK de Supabase -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Recibos - Municipalidad San Roque de Cumbaza</title>
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Cliente Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+      @page { size: A4 portrait; margin: 5mm 8mm; }
+      .no-print { display: none !important; }
+      .page-break { page-break-after: always; }
+    }
+  </style>
 </head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar / Menú Lateral -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">🏛️</div>
-        <div class="brand-text">
-          <h2>Muni San Roque</h2>
-          <span>Recibos & Tributación</span>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+  <div class="flex h-screen overflow-hidden no-print">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-emerald-900 text-white flex flex-col">
+      <div class="p-4 border-b border-emerald-800 flex items-center space-x-3">
+        <div class="bg-emerald-700 p-2 rounded-lg">
+          <i data-lucide="file-text" class="w-6 h-6 text-emerald-200"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-sm leading-tight">Muni San Roque</h1>
+          <p class="text-xs text-emerald-300">Recibos & Tributación</p>
         </div>
       </div>
-
-      <nav class="menu">
-        <a href="#" class="menu-item active" id="btn-menu-padron" onclick="cambiarVista('padron'); return false;">
-          <span class="icon">👥</span>
-          Padrón de Usuarios
-        </a>
-        <a href="#" class="menu-item" id="btn-menu-matriz" onclick="cambiarVista('matriz'); return false;">
-          <span class="icon">📅</span>
-          Matriz de Pagos
-        </a>
-        <a href="#" class="menu-item" id="btn-menu-cortes" onclick="cambiarVista('cortes'); return false;">
-          <span class="icon">✂️</span>
-          Órdenes de Corte
-        </a>
+      <nav class="flex-1 p-4 space-y-1">
+        <button onclick="switchTab('usuarios')" id="btn-usuarios" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg bg-emerald-800 text-white font-medium text-sm transition-colors">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Padrón de Usuarios</span>
+        </button>
+        <button onclick="switchTab('matriz')" id="btn-matriz" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-emerald-200 hover:bg-emerald-800 hover:text-white font-medium text-sm transition-colors">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+          <span>Matriz de Pagos</span>
+        </button>
+        <button onclick="switchTab('cortes')" id="btn-cortes" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-emerald-200 hover:bg-emerald-800 hover:text-white font-medium text-sm transition-colors">
+          <i data-lucide="scissors" class="w-4 h-4"></i>
+          <span>Órdenes de Corte</span>
+        </button>
       </nav>
 
-      <div class="db-status">
-        Base de Datos: <strong>Supabase</strong> 🟢
+      <div class="p-4 border-t border-emerald-800 text-center">
+        <span class="text-[11px] text-emerald-300">Base de Datos: <b class="text-white">Supabase ☁️</b></span>
       </div>
     </aside>
 
-    <!-- Contenido Principal -->
-    <main class="main-content">
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+      <header class="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
+        <h2 id="page-title" class="text-xl font-bold text-gray-800">Padrón de Usuarios</h2>
+        <button onclick="abrirModalImpresion()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 shadow transition-all">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Imprimir Recibos Pendientes</span>
+        </button>
+      </header>
 
-      <!-- VISTA 1: PADRÓN DE USUARIOS -->
-      <div id="vista-padron" class="seccion-vista">
-        <header class="top-header">
-          <h1>Padrón de Contribuyentes</h1>
-          <button class="btn-primary" id="btn-imprimir-pendientes">
-            Imprimir Recibos Pendientes
-          </button>
-        </header>
+      <div class="p-6 space-y-6">
 
-        <!-- Formulario para Registrar / Editar -->
-        <section class="card">
-          <h3>Registrar / Editar Contribuyente</h3>
-          <form id="form-contribuyente">
-            <input type="hidden" id="edit-id" value="" />
-
-            <div class="form-grid-3">
-              <div class="form-group">
-                <label for="suministro">N° Suministro</label>
-                <input type="text" id="suministro" placeholder="0000000001" required />
+        <!-- TAB 1: PADRÓN DE USUARIOS -->
+        <section id="tab-usuarios" class="space-y-6">
+          <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <h3 id="form-user-title" class="text-sm font-bold text-gray-800 mb-3">Registrar / Editar Contribuyente</h3>
+            <form id="form-user" onsubmit="guardarUsuario(event)" class="space-y-3">
+              <input type="hidden" id="input-edit-id" value="">
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">N° Suministro</label>
+                  <input type="text" id="input-suministro" required placeholder="Ej. 20178685431" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre Completo</label>
+                  <input type="text" id="input-nombre" required placeholder="Ej. ROMERO LOPEZ, ELVIRA" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Dirección</label>
+                  <input type="text" id="input-direccion" required placeholder="Ej. JR. LIMA N° 123" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
               </div>
 
-              <div class="form-group">
-                <label for="nombre">Nombre Completo</label>
-                <input type="text" id="nombre" placeholder="APELLIDOS Y NOMBRES" required />
+              <!-- SERVICIOS CONTRATADOS -->
+              <div class="bg-gray-50 p-3 rounded-lg border grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="chk-agua" checked onchange="calcularTarifaTotalForm()" class="w-4 h-4 text-emerald-600 rounded">
+                  <label for="chk-agua" class="text-xs font-medium text-gray-700">Agua Potable (S/.)</label>
+                  <input type="number" step="0.5" id="monto-agua" value="10.00" oninput="calcularTarifaTotalForm()" class="w-20 px-2 py-1 border rounded text-xs">
+                </div>
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="chk-desague" checked onchange="calcularTarifaTotalForm()" class="w-4 h-4 text-emerald-600 rounded">
+                  <label for="chk-desague" class="text-xs font-medium text-gray-700">Desagüe (S/.)</label>
+                  <input type="number" step="0.5" id="monto-desague" value="3.00" oninput="calcularTarifaTotalForm()" class="w-20 px-2 py-1 border rounded text-xs">
+                </div>
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="chk-limpieza" checked onchange="calcularTarifaTotalForm()" class="w-4 h-4 text-emerald-600 rounded">
+                  <label for="chk-limpieza" class="text-xs font-medium text-gray-700">Limpieza (S/.)</label>
+                  <input type="number" step="0.5" id="monto-limpieza" value="2.00" oninput="calcularTarifaTotalForm()" class="w-20 px-2 py-1 border rounded text-xs">
+                </div>
               </div>
 
-              <div class="form-group">
-                <label for="direccion">Dirección</label>
-                <input type="text" id="direccion" placeholder="JR. LIMA N° 204" required />
+              <div class="flex justify-between items-center pt-2">
+                <div class="text-xs font-bold text-gray-700">
+                  Tarifa Mensual Calculada: <span id="lbl-tarifa-total" class="text-emerald-700 font-extrabold text-sm">S/. 15.00</span>
+                </div>
+                <div class="flex space-x-2">
+                  <button type="button" id="btn-cancelar-edit" onclick="cancelarEdicion()" class="hidden bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium">Cancelar</button>
+                  <button type="submit" id="btn-guardar-user" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-1.5 rounded-lg text-xs font-medium">Guardar Usuario</button>
+                </div>
               </div>
-            </div>
-
-            <!-- Selección de Servicios -->
-            <div class="services-row">
-              <label class="checkbox-label">
-                <input type="checkbox" id="chk-agua" checked />
-                <span>Agua Potable (S/.)</span>
-                <input type="number" id="costo-agua" value="10.00" step="0.50" min="0" />
-              </label>
-
-              <label class="checkbox-label">
-                <input type="checkbox" id="chk-desague" checked />
-                <span>Desagüe (S/.)</span>
-                <input type="number" id="costo-desague" value="3.00" step="0.50" min="0" />
-              </label>
-
-              <label class="checkbox-label">
-                <input type="checkbox" id="chk-limpieza" checked />
-                <span>Limpieza (S/.)</span>
-                <input type="number" id="costo-limpieza" value="2.00" step="0.50" min="0" />
-              </label>
-            </div>
-
-            <div class="form-footer">
-              <div class="total-badge">
-                Tarifa Mensual Calculada: <strong id="total-calculado">S/. 15.00</strong>
-              </div>
-              <div class="button-group">
-                <button type="button" class="btn-secondary" id="btn-limpiar" style="display: none;">Cancelar</button>
-                <button type="submit" class="btn-success" id="btn-guardar">Guardar Usuario</button>
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <!-- Tabla / Lista General -->
-        <section class="card">
-          <div class="card-header">
-            <h3>Lista General de Registrados</h3>
-            <div class="filter-group">
-              <label for="filtro-deuda">Filtrar por Deuda:</label>
-              <select id="filtro-deuda">
-                <option value="todos">Todos los usuarios</option>
-                <option value="morosos">Solo Morosos</option>
-                <option value="aldia">Al día</option>
-              </select>
-            </div>
+            </form>
           </div>
 
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>SUMINISTRO</th>
-                  <th>CONTRIBUYENTE</th>
-                  <th>DIRECCIÓN</th>
-                  <th>MESES DEUDA</th>
-                  <th>ESTADO</th>
-                  <th>ACCIONES</th>
-                </tr>
-              </thead>
-              <tbody id="tabla-body">
-                <tr>
-                  <td colspan="6" class="text-center">Cargando contribuyentes desde Supabase...</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- TABLA DE PADRÓN -->
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4">
+              <h3 class="text-base font-bold text-gray-800">Lista General de Registrados</h3>
+              <div class="flex items-center space-x-2">
+                <label class="text-xs font-bold text-gray-600">Filtrar por Deuda:</label>
+                <select id="filtro-deuda" onchange="renderUsuarios()" class="border rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+                  <option value="todos">Todos los usuarios</option>
+                  <option value="al-dia">🟢 Al Día (0 Meses)</option>
+                  <option value="deuda-1-3">🟡 Con Deuda (1 a 3 Meses)</option>
+                  <option value="morosos">🔴 Morosos (Más de 3 Meses)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left text-gray-600">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+                  <tr>
+                    <th class="py-3 px-4">Suministro</th>
+                    <th class="py-3 px-4">Contribuyente</th>
+                    <th class="py-3 px-4">Dirección</th>
+                    <th class="py-3 px-4 text-center">Meses Deuda</th>
+                    <th class="py-3 px-4 text-center">Estado</th>
+                    <th class="py-3 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="list-users-table" class="divide-y"></tbody>
+              </table>
+            </div>
           </div>
         </section>
-      </div>
 
-      <!-- VISTA 2: MATRIZ DE PAGOS -->
-      <div id="vista-matriz" class="seccion-vista" style="display: none;">
-        <header class="top-header">
-          <h1>Matriz de Pagos Mensuales</h1>
-        </header>
-        <section class="card">
-          <h3>Control Anual de Pagos</h3>
-          <p>Módulo de registro y consulta de pagos mensuales por contribuyente (Enero - Diciembre).</p>
+        <!-- TAB 2: MATRIZ DE DEUDAS -->
+        <section id="tab-matriz" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="text-base font-bold text-gray-800 mb-1">Matriz de Control de Recibos (Año 2026)</h3>
+            <p class="text-xs text-gray-500 mb-4">Ingresa el valor del pago recibido. Deja en 0 para mantener como adeudado.</p>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead class="text-gray-700 bg-emerald-50 border-b border-emerald-200">
+                  <tr>
+                    <th class="py-3 px-2 font-bold min-w-[160px]">Contribuyente</th>
+                    <th class="py-3 px-1 text-center">Ene</th>
+                    <th class="py-3 px-1 text-center">Feb</th>
+                    <th class="py-3 px-1 text-center">Mar</th>
+                    <th class="py-3 px-1 text-center">Abr</th>
+                    <th class="py-3 px-1 text-center">May</th>
+                    <th class="py-3 px-1 text-center">Jun</th>
+                    <th class="py-3 px-1 text-center">Jul</th>
+                    <th class="py-3 px-1 text-center">Ago</th>
+                    <th class="py-3 px-1 text-center">Set</th>
+                    <th class="py-3 px-1 text-center">Oct</th>
+                    <th class="py-3 px-1 text-center">Nov</th>
+                    <th class="py-3 px-1 text-center">Dic</th>
+                    <th class="py-3 px-2 text-center bg-emerald-100 font-bold text-emerald-900 border-l">DEUDA TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody id="matrix-pagos-table" class="divide-y divide-gray-200"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
-      </div>
 
-      <!-- VISTA 3: ÓRDENES DE CORTE -->
-      <div id="vista-cortes" class="seccion-vista" style="display: none;">
-        <header class="top-header">
-          <h1>Órdenes de Corte de Servicio</h1>
-        </header>
-        <section class="card">
-          <h3>Usuarios con Suspensión del Servicio</h3>
-          <p>Relación de contribuyentes morosos notificados para corte de agua y desagüe.</p>
+        <!-- TAB 3: CORTES DE SERVICIO automatizados -->
+        <section id="tab-cortes" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-red-700 flex items-center space-x-2">
+                  <i data-lucide="scissors" class="w-5 h-5"></i>
+                  <span>Notificaciones Automatizadas de Corte de Agua</span>
+                </h3>
+                <p class="text-xs text-gray-500">Detecta automáticamente usuarios con 2 o más meses adeudados.</p>
+              </div>
+              <button onclick="imprimirOrdenesCorte()" class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center space-x-2 shadow transition-all">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Imprimir Notificaciones de Corte</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left text-gray-600">
+                <thead class="text-xs text-gray-700 uppercase bg-red-50 border-b border-red-200">
+                  <tr>
+                    <th class="py-3 px-4">Suministro</th>
+                    <th class="py-3 px-4">Contribuyente</th>
+                    <th class="py-3 px-4">Dirección</th>
+                    <th class="py-3 px-4 text-center">Meses Afectados</th>
+                    <th class="py-3 px-4 text-right">Deuda Total</th>
+                    <th class="py-3 px-4 text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-cortes-body" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
-      </div>
 
+      </div>
     </main>
   </div>
 
-  <!-- Plantilla Oculta para Impresión de Recibos -->
-  <div id="print-area" class="print-area"></div>
+  <!-- MODAL: FILTRAR Y GENERAR RECIBOS -->
+  <div id="modal-impresion" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 no-print">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-gray-800 text-lg flex items-center space-x-2">
+          <i data-lucide="filter" class="w-5 h-5 text-emerald-600"></i>
+          <span>Filtrar Recibos para Imprimir</span>
+        </h3>
+        <button onclick="cerrarModalImpresion()" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
 
-  <script src="app.js"></script>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Desde el mes:</label>
+          <select id="select-mes-desde" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5" selected>Junio</option>
+            <option value="6">Julio</option>
+            <option value="7">Agosto</option>
+            <option value="8">Setiembre</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Hasta el mes:</label>
+          <select id="select-mes-hasta" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5">Junio</option>
+            <option value="6">Julio</option>
+            <option value="7" selected>Agosto</option>
+            <option value="8">Setiembre</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-3 border-t pt-4">
+        <button onclick="cerrarModalImpresion()" class="px-4 py-2 border rounded-lg text-sm text-gray-600 font-medium">Cancelar</button>
+        <button onclick="ejecutarImpresion()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-medium flex items-center space-x-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Generar Solo Deudores</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AREA DE IMPRESIÓN (OCULTA EN PANTALLA) -->
+  <div id="print-area" class="hidden"></div>
+
+  <!-- LÓGICA JAVASCRIPT CON SUPABASE -->
+  <script>
+    // ⚙️ CREDENCIALES CONFIGURADAS
+    const SUPABASE_URL = 'https://epjwgnjaxguzlrmsvtuq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable__py_2VbWJSOU_1BRqQdR7w_Yp4uZ5-p';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    let usuarios = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      calcularTarifaTotalForm();
+      cargarUsuariosDesdeSupabase();
+    });
+
+    // 📡 LEER DESDE SUPABASE
+    async function cargarUsuariosDesdeSupabase() {
+      const { data, error } = await _supabase
+        .from('contribuyentes')
+        .select('*')
+        .order('nombre', { ascending: true });
+
+      if (error) {
+        console.error('Error al cargar datos de Supabase:', error);
+        alert('Error al conectar con Supabase: ' + error.message);
+        return;
+      }
+
+      usuarios = data.map(u => ({
+        ...u,
+        servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
+        pagos: u.pagos || new Array(12).fill(0)
+      }));
+
+      renderAll();
+    }
+
+    function getTarifaTotal(user) {
+      const s = user.servicios || {};
+      return (s.agua || 0) + (s.desague || 0) + (s.limpieza || 0);
+    }
+
+    function contarMesesDeuda(user) {
+      if(!user.pagos) return 12;
+      return user.pagos.filter(monto => monto === 0).length;
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-usuarios').classList.add('hidden');
+      document.getElementById('tab-matriz').classList.add('hidden');
+      document.getElementById('tab-cortes').classList.add('hidden');
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+      const titles = {
+        'usuarios': 'Padrón de Usuarios',
+        'matriz': 'Matriz de Pagos',
+        'cortes': 'Notificaciones de Corte de Servicio'
+      };
+      document.getElementById('page-title').innerText = titles[tab];
+      renderAll();
+    }
+
+    function renderAll() {
+      renderUsuarios();
+      renderMatrizPagos();
+      renderTablaCortes();
+    }
+
+    function renderUsuarios() {
+      const filtro = document.getElementById('filtro-deuda').value;
+      const tbody = document.getElementById('list-users-table');
+
+      const filtrados = usuarios.filter(u => {
+        const mesesDeuda = contarMesesDeuda(u);
+        if (filtro === 'al-dia') return mesesDeuda === 0;
+        if (filtro === 'deuda-1-3') return mesesDeuda >= 1 && mesesDeuda <= 3;
+        if (filtro === 'morosos') return mesesDeuda > 3;
+        return true;
+      });
+
+      tbody.innerHTML = filtrados.map(u => {
+        const mesesDeuda = contarMesesDeuda(u);
+        let badgeEstado = '';
+
+        if (mesesDeuda === 0) {
+          badgeEstado = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟢 AL DÍA</span>`;
+        } else if (mesesDeuda <= 3) {
+          badgeEstado = `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟡 EN DEUDA (${mesesDeuda} Meses)</span>`;
+        } else {
+          badgeEstado = `<span class="bg-red-100 text-red-800 border border-red-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🔴 MOROSO (${mesesDeuda} Meses)</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-gray-50">
+            <td class="py-2.5 px-4 font-mono font-bold text-emerald-800">${u.suministro}</td>
+            <td class="py-2.5 px-4 font-semibold">${u.nombre}</td>
+            <td class="py-2.5 px-4 text-gray-600">${u.direccion}</td>
+            <td class="py-2.5 px-4 text-center font-bold">${mesesDeuda} mes/es</td>
+            <td class="py-2.5 px-4 text-center">${badgeEstado}</td>
+            <td class="py-2.5 px-4 text-center space-x-1">
+              <button onclick="cargarUsuarioEdicion(${u.id})" class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 bg-blue-50 rounded border border-blue-200">Editar</button>
+              <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 bg-red-50 rounded border border-red-200">Eliminar</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function guardarUsuario(e) {
+      e.preventDefault();
+      const editId = document.getElementById('input-edit-id').value;
+      const suministro = document.getElementById('input-suministro').value;
+      const nombre = document.getElementById('input-nombre').value;
+      const direccion = document.getElementById('input-direccion').value;
+      const servicios = calcularTarifaTotalForm();
+
+      if (editId) {
+        const { error } = await _supabase
+          .from('contribuyentes')
+          .update({ suministro, nombre, direccion, servicios })
+          .eq('id', editId);
+
+        if (error) alert('Error al actualizar: ' + error.message);
+        else cancelarEdicion();
+
+      } else {
+        const { error } = await _supabase
+          .from('contribuyentes')
+          .insert([{
+            suministro,
+            nombre,
+            direccion,
+            servicios,
+            pagos: new Array(12).fill(0)
+          }]);
+
+        if (error) alert('Error al registrar: ' + error.message);
+        else document.getElementById('form-user').reset();
+      }
+
+      cargarUsuariosDesdeSupabase();
+    }
+
+    async function actualizarPago(userId, mesIdx, valor) {
+      const user = usuarios.find(u => u.id === userId);
+      if(user) {
+        const nuevosPagos = [...user.pagos];
+        nuevosPagos[mesIdx] = parseFloat(valor) || 0;
+
+        const { error } = await _supabase
+          .from('contribuyentes')
+          .update({ pagos: nuevosPagos })
+          .eq('id', userId);
+
+        if(error) alert('Error guardando pago: ' + error.message);
+        else cargarUsuariosDesdeSupabase();
+      }
+    }
+
+    async function eliminarUsuario(id) {
+      if(confirm('¿Seguro que deseas eliminar este contribuyente de Supabase?')) {
+        const { error } = await _supabase.from('contribuyentes').delete().eq('id', id);
+        if(error) alert('Error al eliminar: ' + error.message);
+        else cargarUsuariosDesdeSupabase();
+      }
+    }
+
+    function renderMatrizPagos() {
+      const tbody = document.getElementById('matrix-pagos-table');
+      tbody.innerHTML = usuarios.map(u => {
+        const totalPendiente = u.pagos.reduce((acc, curr) => curr === 0 ? acc + getTarifaTotal(u) : acc, 0);
+
+        return `
+          <tr class="hover:bg-gray-50">
+            <td class="py-2 px-2 font-semibold border-b">
+              <div class="text-gray-800">${u.nombre}</div>
+              <div class="text-[10px] text-gray-400 font-mono">${u.suministro}</div>
+            </td>
+            ${u.pagos.map((monto, idx) => `
+              <td class="py-2 px-1 text-center border-b">
+                <input type="number" step="0.5" value="${monto}" 
+                  onchange="actualizarPago(${u.id}, ${idx}, this.value)"
+                  class="w-12 text-center py-1 border rounded text-xs transition-colors ${monto > 0 ? 'bg-emerald-100 text-emerald-800 font-bold border-emerald-400' : 'bg-red-50 text-red-600 border-red-200'} focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              </td>
+            `).join('')}
+            <td class="py-2 px-2 text-center border-b border-l bg-emerald-50 font-bold text-red-700">
+              S/. ${totalPendiente.toFixed(2)}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderTablaCortes() {
+      const deudoresCorte = usuarios.filter(u => contarMesesDeuda(u) >= 2);
+      const tbody = document.getElementById('tabla-cortes-body');
+
+      if (deudoresCorte.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500 font-medium">🎉 No hay usuarios con 2 o más meses de retraso.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = deudoresCorte.map(u => {
+        const mesesDeuda = contarMesesDeuda(u);
+        const tarifa = getTarifaTotal(u);
+        const totalDeuda = mesesDeuda * tarifa;
+
+        return `
+          <tr class="hover:bg-red-50/50">
+            <td class="py-2.5 px-4 font-mono font-bold text-red-800">${u.suministro}</td>
+            <td class="py-2.5 px-4 font-bold text-gray-800">${u.nombre}</td>
+            <td class="py-2.5 px-4 text-gray-600">${u.direccion}</td>
+            <td class="py-2.5 px-4 text-center font-extrabold text-red-600">${mesesDeuda} Meses</td>
+            <td class="py-2.5 px-4 text-right font-extrabold text-red-700">S/. ${totalDeuda.toFixed(2)}</td>
+            <td class="py-2.5 px-4 text-center">
+              <span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Notificación de Corte</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function calcularTarifaTotalForm() {
+      const chkAgua = document.getElementById('chk-agua').checked;
+      const chkDesague = document.getElementById('chk-desague').checked;
+      const chkLimpieza = document.getElementById('chk-limpieza').checked;
+
+      const mAgua = chkAgua ? parseFloat(document.getElementById('monto-agua').value) || 0 : 0;
+      const mDesague = chkDesague ? parseFloat(document.getElementById('monto-desague').value) || 0 : 0;
+      const mLimpieza = chkLimpieza ? parseFloat(document.getElementById('monto-limpieza').value) || 0 : 0;
+
+      const total = mAgua + mDesague + mLimpieza;
+      document.getElementById('lbl-tarifa-total').innerText = `S/. ${total.toFixed(2)}`;
+      return { agua: mAgua, desague: mDesague, limpieza: mLimpieza };
+    }
+
+    function cargarUsuarioEdicion(id) {
+      const user = usuarios.find(u => u.id === id);
+      if (user) {
+        document.getElementById('input-edit-id').value = user.id;
+        document.getElementById('input-suministro').value = user.suministro;
+        document.getElementById('input-nombre').value = user.nombre;
+        document.getElementById('input-direccion').value = user.direccion;
+
+        document.getElementById('chk-agua').checked = user.servicios.agua > 0;
+        document.getElementById('monto-agua').value = user.servicios.agua || 10;
+        document.getElementById('chk-desague').checked = user.servicios.desague > 0;
+        document.getElementById('monto-desague').value = user.servicios.desague || 3;
+        document.getElementById('chk-limpieza').checked = user.servicios.limpieza > 0;
+        document.getElementById('monto-limpieza').value = user.servicios.limpieza || 2;
+
+        calcularTarifaTotalForm();
+        document.getElementById('form-user-title').innerText = `Editando: ${user.nombre}`;
+        document.getElementById('btn-guardar-user').innerText = 'Actualizar Usuario';
+        document.getElementById('btn-cancelar-edit').classList.remove('hidden');
+      }
+    }
+
+    function cancelarEdicion() {
+      document.getElementById('input-edit-id').value = '';
+      document.getElementById('form-user').reset();
+      calcularTarifaTotalForm();
+      document.getElementById('form-user-title').innerText = 'Registrar / Editar Contribuyente';
+      document.getElementById('btn-guardar-user').innerText = 'Guardar Usuario';
+      document.getElementById('btn-cancelar-edit').classList.add('hidden');
+    }
+
+    function abrirModalImpresion() { document.getElementById('modal-impresion').classList.remove('hidden'); }
+    function cerrarModalImpresion() { document.getElementById('modal-impresion').classList.add('hidden'); }
+
+    function ejecutarImpresion() {
+      const desde = parseInt(document.getElementById('select-mes-desde').value);
+      const hasta = parseInt(document.getElementById('select-mes-hasta').value);
+
+      if (desde > hasta) {
+        alert('El mes "Desde" no puede ser posterior al mes "Hasta".');
+        return;
+      }
+
+      const usuariosDeudores = usuarios.map(u => {
+        let mesesDeuda = [];
+        const tarifa = getTarifaTotal(u);
+
+        for (let m = desde; m <= hasta; m++) {
+          if (u.pagos[m] === 0) mesesDeuda.push(MESES[m].toUpperCase());
+        }
+
+        return { ...u, mesesDeuda, totalDeuda: mesesDeuda.length * tarifa, numMeses: mesesDeuda.length };
+      }).filter(u => u.mesesDeuda.length > 0);
+
+      if (usuariosDeudores.length === 0) {
+        alert('¡Todos los usuarios están al día en el rango seleccionado!');
+        cerrarModalImpresion();
+        return;
+      }
+
+      cerrarModalImpresion();
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+      const etiquetaRango = (desde === hasta) ? MESES[desde].toUpperCase() : `${MESES[desde].toUpperCase()} A ${MESES[hasta].toUpperCase()}`;
+
+      for (let i = 0; i < usuariosDeudores.length; i += 3) {
+        const grupo = usuariosDeudores.slice(i, i + 3);
+        const page = document.createElement('div');
+        page.className = 'page-break space-y-4';
+
+        page.innerHTML = grupo.map(u => {
+          let filasServicios = '';
+          if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Agua Potable (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.agua * u.numMeses).toFixed(2)}</td></tr>`;
+          if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Desagüe (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.desague * u.numMeses).toFixed(2)}</td></tr>`;
+          if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Limpieza Pública (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.limpieza * u.numMeses).toFixed(2)}</td></tr>`;
+
+          return `
+            <div style="border: 2px solid #1b4d3e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-family: sans-serif; background: white;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b4d3e; padding-bottom: 6px; margin-bottom: 6px;">
+                <div>
+                  <h2 style="font-size: 11pt; font-weight: bold; color: #1b4d3e; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+                  <p style="font-size: 8pt; color: #3b6e5f; margin:0; font-weight:600;">SUBGERENCIA DE RECAUDACIÓN Y TRIBUTACIÓN</p>
+                </div>
+                <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 4px 8px; border-radius: 4px; text-align: center; min-width: 130px;">
+                  <div style="font-size: 8pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
+                  <div style="font-size: 8pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
+                </div>
+              </div>
+
+              <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 6px; border-radius: 4px; font-size: 8pt; margin-bottom: 6px;">
+                <table style="width: 100%;">
+                  <tr>
+                    <td style="font-weight: bold; color: #1b4d3e; width: 15%;">USUARIO:</td>
+                    <td style="font-weight: bold;">${u.nombre}</td>
+                    <td style="font-weight: bold; color: #1b4d3e; width: 18%;">SUMINISTRO:</td>
+                    <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
+                    <td>${u.direccion}</td>
+                    <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
+                    <td>07/08/2026</td>
+                  </tr>
+                </table>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 6px;">
+                <thead>
+                  <tr style="background: #1b4d3e; color: white;">
+                    <th style="text-align: left; padding: 3px 6px;">SERVICIOS CONTRATADOS</th>
+                    <th style="text-align: right; padding: 3px 6px;">SUBTOTAL (S/.)</th>
+                  </tr>
+                </thead>
+                <tbody>${filasServicios}</tbody>
+              </table>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 7.5pt; font-weight: bold; max-width: 65%;">
+                  ⚠️ MESES DEUDORES (${u.numMeses}): ${u.mesesDeuda.join(', ')}<br>
+                  🚨 EVITE EL CORTE DEL SERVICIO CANCELANDO A TIEMPO
+                </div>
+                <div style="background: #1b4d3e; color: white; padding: 6px 12px; border-radius: 4px; font-size: 10pt; font-weight: bold;">
+                  TOTAL A PAGAR: S/. ${u.totalDeuda.toFixed(2)}
+                </div>
+              </div>
+            </div>
+            <div style="border-top: 1px dashed #999; margin: 8px 0; text-align: right; font-size: 7pt; color: #777;">✂ --- Cortar aquí ---</div>
+          `;
+        }).join('');
+
+        printArea.appendChild(page);
+      }
+
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+
+    function imprimirOrdenesCorte() {
+      const deudores = usuarios.filter(u => contarMesesDeuda(u) >= 2);
+      if (deudores.length === 0) return alert('No hay usuarios con 2 o más meses de retraso.');
+
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+
+      for (let i = 0; i < deudores.length; i += 2) {
+        const grupo = deudores.slice(i, i + 2);
+        const page = document.createElement('div');
+        page.className = 'page-break space-y-6';
+
+        page.innerHTML = grupo.map(u => {
+          const mesesDeuda = contarMesesDeuda(u);
+          const totalDeuda = mesesDeuda * getTarifaTotal(u);
+
+          return `
+            <div style="border: 2px solid #b91c1c; border-radius: 8px; padding: 15px; background: white; font-family: sans-serif;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; margin-bottom: 10px;">
+                <div>
+                  <h2 style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+                  <p style="font-size: 8pt; color: #7f1d1d; margin:0; font-weight:bold;">SUBGERENCIA DE RECAUDACIÓN Y SERVICIOS PÚBLICOS</p>
+                </div>
+                <div style="background: #fef2f2; border: 2px solid #b91c1c; color: #b91c1c; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 9pt; text-align: center;">
+                  🚨 NOTIFICACIÓN PREVIA DE CORTE
+                </div>
+              </div>
+
+              <div style="font-size: 8.5pt; margin-bottom: 12px; line-height: 1.4;">
+                <p><strong>SUMINISTRO:</strong> <span style="font-family: monospace;">${u.suministro}</span> | <strong>FECHA:</strong> 07/08/2026</p>
+                <p><strong>USUARIO:</strong> ${u.nombre}</p>
+                <p><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
+              </div>
+
+              <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 12px; border-radius: 4px;">
+                <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold;">ASUNTO: PRIMER AVISO DE CORTE DEL SERVICIO DE AGUA POTABLE</p>
+                <p style="margin:0;">Mediante el presente documento se le notifica que registra una deuda acumulada de <strong>${mesesDeuda} meses de retraso</strong>, por un monto total de <strong>S/. ${totalDeuda.toFixed(2)}</strong>.</p>
+                <p style="margin:5px 0 0 0; font-weight: bold; color: #991b1b;">Se le otorga un plazo improrrogable de 24 HORAS para apersonarse a la Municipalidad a regularizar su deuda, de lo contrario se procederá al CORTE Y SUSPENSIÓN DEL SERVICIO.</p>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt;">
+                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma del Notificador</div>
+                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma / DNI del Usuario</div>
+              </div>
+            </div>
+            <div style="border-top: 1px dashed #aaa; margin: 15px 0;"></div>
+          `;
+        }).join('');
+
+        printArea.appendChild(page);
+      }
+
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+  </script>
 </body>
 </html>
