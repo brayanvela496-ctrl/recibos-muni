@@ -623,7 +623,7 @@ async function cargarUsuariosDesdeSupabase() {
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b4d3e; padding-bottom: 6px; margin-bottom: 6px;">
                 <div>
                   <h2 style="font-size: 11pt; font-weight: bold; color: #1b4d3e; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-                  <p style="font-size: 8pt; color: #3b6e5f; margin:0; font-weight:600;">SUBGERENCIA DE RECAUDACIÓN Y TRIBUTACIÓN</p>
+                  <p style="font-size: 8pt; color: #3b6e5f; margin:0; font-weight:600;">OFICINA DE RENTAS</p>
                 </div>
                 <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 4px 8px; border-radius: 4px; text-align: center; min-width: 130px;">
                   <div style="font-size: 8pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
@@ -662,8 +662,9 @@ async function cargarUsuariosDesdeSupabase() {
                 <div style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 7.5pt; font-weight: bold; max-width: 65%;">
                   ⚠️ MESES DEUDORES (${u.numMeses}): ${u.mesesDeuda.join(', ')}<br>
                   🚨 EVITE EL CORTE DEL SERVICIO CANCELANDO A TIEMPO
+                  👀 FECHA DE CORTE 20 DE CADA MES
                 </div>
-                <div style="background: #1b4d3e; color: white; padding: 6px 12px; border-radius: 4px; font-size: 10pt; font-weight: bold;">
+                <div style="background: #1b4d3e; color: black; padding: 6px 12px; border-radius: 4px; font-size: 10pt; font-weight: bold;">
                   TOTAL A PAGAR: S/. ${u.totalDeuda.toFixed(2)}
                 </div>
               </div>
