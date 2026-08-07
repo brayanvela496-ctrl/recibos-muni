@@ -298,43 +298,50 @@
 
     
     // 📡 LEER DESDE SUPABASE (Paginación automática para traer MÁS de 200 registros)
-  const { data, error } = await _supabase
+   // 📡 LEER DESDE SUPABASE (Paginación compatible con el límite de 200 de Supabase)
+async function cargarUsuariosDesdeSupabase() {
+  let todosLosUsuarios = [];
+  let desde = 0;
+  const paso = 200; // Supabase por defecto corta en 200 por petición
+  let hayMasDatos = true;
+
+  while (hayMasDatos) {
+    const { data, error } = await _supabase
       .from('contribuyentes')
       .select('*')
-      .range(0, 999)
-      .order('id', { ascending: true });
+      .range(desde, desde + paso - 1)
+      .order('id', { ascending: true }); // Es mejor ordenar por 'id' para evitar duplicados en la paginación
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error al cargar datos de Supabase:', error);
+      alert('Error al conectar con Supabase: ' + error.message);
+      return;
+    }
 
-    contribuyentes = data || [];
-    renderTabla();
-  } catch (error) {
-    console.error('Error al obtener datos:', error);
-    tablaBody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red;">Error al cargar datos de Supabase. Verifique consola.</td></tr>`;
-  }
-}
+    if (data && data.length > 0) {
+      todosLosUsuarios = todosLosUsuarios.concat(data);
+      desde += data.length; // Avanza exactamente la cantidad recibida
 
-        if (data && data.length > 0) {
-          todosLosUsuarios = todosLosUsuarios.concat(data);
-          desde += paso;
-          
-          // Si trajo menos de 200 registros, significa que ya no hay más
-          if (data.length < paso) {
-            hayMasDatos = false;
-          }
-        } else {
-          hayMasDatos = false;
-        }
+      // Si trajo menos registros que el tamaño del lote, significa que llegamos al final
+      if (data.length < paso) {
+        hayMasDatos = false;
       }
+    } else {
+      hayMasDatos = false;
+    }
+  }
 
-      // Asignar los datos recopilados
-      usuarios = todosLosUsuarios.map(u => ({
-        ...u,
-        servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
-        pagos: u.pagos || new Array(12).fill(0)
-      }));
+  console.log(`✅ Registros totales cargados: ${todosLosUsuarios.length}`);
 
-      renderAll();
+  // Asignar los datos recopilados
+  usuarios = todosLosUsuarios.map(u => ({
+    ...u,
+    servicios: u.servicios || { agua: 10, desague: 3, limpieza: 2 },
+    pagos: u.pagos || new Array(12).fill(0)
+  }));
+
+  renderAll();
+
     }
     function getTarifaTotal(user) {
       const s = user.servicios || {};
