@@ -298,24 +298,21 @@
 
     
     // 📡 LEER DESDE SUPABASE (Paginación automática para traer MÁS de 200 registros)
-    async function cargarUsuariosDesdeSupabase() {
-      let todosLosUsuarios = [];
-      let desde = 0;
-      const paso = 200; // Bloques de 200 en 200
-      let hayMasDatos = true;
+  const { data, error } = await _supabase
+      .from('contribuyentes')
+      .select('*')
+      .range(0, 999)
+      .order('id', { ascending: true });
 
-      while (hayMasDatos) {
-        const { data, error } = await _supabase
-          .from('contribuyentes')
-          .select('*')
-          .range(desde, desde + paso - 1)
-          .order('nombre', { ascending: true });
+    if (error) throw error;
 
-        if (error) {
-          console.error('Error al cargar datos de Supabase:', error);
-          alert('Error al conectar con Supabase: ' + error.message);
-          return;
-        }
+    contribuyentes = data || [];
+    renderTabla();
+  } catch (error) {
+    console.error('Error al obtener datos:', error);
+    tablaBody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red;">Error al cargar datos de Supabase. Verifique consola.</td></tr>`;
+  }
+}
 
         if (data && data.length > 0) {
           todosLosUsuarios = todosLosUsuarios.concat(data);
