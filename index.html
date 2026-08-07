@@ -297,10 +297,12 @@
     });
 
     // 📡 LEER DESDE SUPABASE
+   // 📡 LEER DESDE SUPABASE (Aumentado para ver hasta 2000 registros)
     async function cargarUsuariosDesdeSupabase() {
       const { data, error } = await _supabase
         .from('contribuyentes')
         .select('*')
+        .range(0, 1999) // 👈 AQUÍ AUMENTAS EL LÍMITE (De 0 a 1999 trae 2000 datos)
         .order('nombre', { ascending: true });
 
       if (error) {
