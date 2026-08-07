@@ -551,11 +551,11 @@ async function cargarUsuariosDesdeSupabase() {
         document.getElementById('input-direccion').value = user.direccion;
 
         document.getElementById('chk-agua').checked = user.servicios.agua > 0;
-        document.getElementById('monto-agua').value = user.servicios.agua || 10;
+        document.getElementById('monto-agua').value = user.servicios.agua || 05;
         document.getElementById('chk-desague').checked = user.servicios.desague > 0;
-        document.getElementById('monto-desague').value = user.servicios.desague || 3;
+        document.getElementById('monto-desague').value = user.servicios.desague || 05;
         document.getElementById('chk-limpieza').checked = user.servicios.limpieza > 0;
-        document.getElementById('monto-limpieza').value = user.servicios.limpieza || 2;
+        document.getElementById('monto-limpieza').value = user.servicios.limpieza || 05;
 
         calcularTarifaTotalForm();
         document.getElementById('form-user-title').innerText = `Editando: ${user.nombre}`;
