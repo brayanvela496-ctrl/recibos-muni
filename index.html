@@ -120,37 +120,53 @@
             </form>
           </div>
 
-          <!-- TABLA DE PADRÓN -->
-          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4">
-              <h3 class="text-base font-bold text-gray-800">Lista General de Registrados</h3>
-              <div class="flex items-center space-x-2">
-                <label class="text-xs font-bold text-gray-600">Filtrar por Deuda:</label>
-                <select id="filtro-deuda" onchange="renderUsuarios()" class="border rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
-                  <option value="todos">Todos los usuarios</option>
-                  <option value="al-dia">🟢 Al Día (0 Meses)</option>
-                  <option value="deuda-1-3">🟡 Con Deuda (1 a 3 Meses)</option>
-                  <option value="morosos">🔴 Morosos (Más de 3 Meses)</option>
-                </select>
-              </div>
-            </div>
+         <!-- TABLA DE PADRÓN -->
+<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+  <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4">
+    <h3 class="text-base font-bold text-gray-800">Lista General de Registrados</h3>
+    
+    <!-- CONTENEDOR DE FILTROS Y BUSCADOR -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Input Buscador -->
+      <div class="relative">
+        <input 
+          type="text" 
+          id="input-buscar-padron" 
+          onkeyup="renderUsuarios()" 
+          placeholder="🔎 Buscar por nombre, suministro..." 
+          class="px-3 py-1.5 border rounded-lg text-xs w-64 focus:ring-2 focus:ring-emerald-500 outline-none"
+        >
+      </div>
 
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-left text-gray-600">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
-                  <tr>
-                    <th class="py-3 px-4">Suministro</th>
-                    <th class="py-3 px-4">Contribuyente</th>
-                    <th class="py-3 px-4">Dirección</th>
-                    <th class="py-3 px-4 text-center">Meses Deuda</th>
-                    <th class="py-3 px-4 text-center">Estado</th>
-                    <th class="py-3 px-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="list-users-table" class="divide-y"></tbody>
-              </table>
-            </div>
-          </div>
+      <!-- Filtro por Deuda -->
+      <div class="flex items-center space-x-2">
+        <label class="text-xs font-bold text-gray-600">Filtrar por Deuda:</label>
+        <select id="filtro-deuda" onchange="renderUsuarios()" class="border rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+          <option value="todos">Todos los usuarios</option>
+          <option value="al-dia">🟢 Al Día (0 Meses)</option>
+          <option value="deuda-1-3">🟡 Con Deuda (1 a 3 Meses)</option>
+          <option value="morosos">🔴 Morosos (Más de 3 Meses)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs text-left text-gray-600">
+      <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+        <tr>
+          <th class="py-3 px-4">Suministro</th>
+          <th class="py-3 px-4">Contribuyente</th>
+          <th class="py-3 px-4">Dirección</th>
+          <th class="py-3 px-4 text-center">Meses Deuda</th>
+          <th class="py-3 px-4 text-center">Estado</th>
+          <th class="py-3 px-4 text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="list-users-table" class="divide-y"></tbody>
+    </table>
+  </div>
+</div>
         </section>
 
         <!-- TAB 2: MATRIZ DE DEUDAS -->
@@ -375,45 +391,65 @@
       renderTablaCortes();
     }
 
-    function renderUsuarios() {
-      const filtro = document.getElementById('filtro-deuda').value;
-      const tbody = document.getElementById('list-users-table');
+  function renderUsuarios() {
+  const filtro = document.getElementById('filtro-deuda').value;
+  const busqueda = (document.getElementById('input-buscar-padron')?.value || '').toLowerCase().trim();
+  const tbody = document.getElementById('list-users-table');
 
-      const filtrados = usuarios.filter(u => {
-        const mesesDeuda = contarMesesDeuda(u);
-        if (filtro === 'al-dia') return mesesDeuda === 0;
-        if (filtro === 'deuda-1-3') return mesesDeuda >= 1 && mesesDeuda <= 3;
-        if (filtro === 'morosos') return mesesDeuda > 3;
-        return true;
-      });
+  const filtrados = usuarios.filter(u => {
+    // 1. Filtrado por estado de deuda
+    const mesesDeuda = contarMesesDeuda(u);
+    let cumpleFiltroDeuda = true;
 
-      tbody.innerHTML = filtrados.map(u => {
-        const mesesDeuda = contarMesesDeuda(u);
-        let badgeEstado = '';
+    if (filtro === 'al-dia') cumpleFiltroDeuda = (mesesDeuda === 0);
+    else if (filtro === 'deuda-1-3') cumpleFiltroDeuda = (mesesDeuda >= 1 && mesesDeuda <= 3);
+    else if (filtro === 'morosos') cumpleFiltroDeuda = (mesesDeuda > 3);
 
-        if (mesesDeuda === 0) {
-          badgeEstado = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟢 AL DÍA</span>`;
-        } else if (mesesDeuda <= 3) {
-          badgeEstado = `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟡 EN DEUDA (${mesesDeuda} Meses)</span>`;
-        } else {
-          badgeEstado = `<span class="bg-red-100 text-red-800 border border-red-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🔴 MOROSO (${mesesDeuda} Meses)</span>`;
-        }
+    // 2. Filtrado por texto (Nombre, Suministro o Dirección)
+    const textoUsuario = `${u.nombre} ${u.suministro} ${u.direccion}`.toLowerCase();
+    const cumpleBusqueda = busqueda === '' || textoUsuario.includes(busqueda);
 
-        return `
-          <tr class="hover:bg-gray-50">
-            <td class="py-2.5 px-4 font-mono font-bold text-emerald-800">${u.suministro}</td>
-            <td class="py-2.5 px-4 font-semibold">${u.nombre}</td>
-            <td class="py-2.5 px-4 text-gray-600">${u.direccion}</td>
-            <td class="py-2.5 px-4 text-center font-bold">${mesesDeuda} mes/es</td>
-            <td class="py-2.5 px-4 text-center">${badgeEstado}</td>
-            <td class="py-2.5 px-4 text-center space-x-1">
-              <button onclick="cargarUsuarioEdicion(${u.id})" class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 bg-blue-50 rounded border border-blue-200">Editar</button>
-              <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 bg-red-50 rounded border border-red-200">Eliminar</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+    return cumpleFiltroDeuda && cumpleBusqueda;
+  });
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="py-6 text-center text-gray-400">
+          No se encontraron contribuyentes que coincidan con la búsqueda.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(u => {
+    const mesesDeuda = contarMesesDeuda(u);
+    let badgeEstado = '';
+
+    if (mesesDeuda === 0) {
+      badgeEstado = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟢 AL DÍA</span>`;
+    } else if (mesesDeuda <= 3) {
+      badgeEstado = `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🟡 EN DEUDA (${mesesDeuda} Meses)</span>`;
+    } else {
+      badgeEstado = `<span class="bg-red-100 text-red-800 border border-red-300 text-[10px] px-2 py-0.5 rounded-full font-bold">🔴 MOROSO (${mesesDeuda} Meses)</span>`;
     }
+
+    return `
+      <tr class="hover:bg-gray-50">
+        <td class="py-2.5 px-4 font-mono font-bold text-emerald-800">${u.suministro}</td>
+        <td class="py-2.5 px-4 font-semibold">${u.nombre}</td>
+        <td class="py-2.5 px-4 text-gray-600">${u.direccion}</td>
+        <td class="py-2.5 px-4 text-center font-bold">${mesesDeuda} mes/es</td>
+        <td class="py-2.5 px-4 text-center">${badgeEstado}</td>
+        <td class="py-2.5 px-4 text-center space-x-1">
+          <button onclick="cargarUsuarioEdicion(${u.id})" class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 bg-blue-50 rounded border border-blue-200">Editar</button>
+          <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 bg-red-50 rounded border border-red-200">Eliminar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
 
     async function guardarUsuario(e) {
       e.preventDefault();
