@@ -630,84 +630,93 @@
         const page = document.createElement('div');
         page.className = 'page-break space-y-4';
 
-        page.innerHTML = grupo.map(u => {
-          let filasServicios = '';
-          if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Agua Potable (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.agua * u.numMeses).toFixed(2)}</td></tr>`;
-          if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Desagüe (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.desague * u.numMeses).toFixed(2)}</td></tr>`;
-          if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Limpieza Pública (${u.numMeses} mes/es)</td><td style="text-align: right; padding: 3px 6px; font-weight: bold;">S/. ${(u.servicios.limpieza * u.numMeses).toFixed(2)}</td></tr>`;
+     // --- DENTRO DE LA FUNCIÓN ejecutarImpresion() ---
 
-          return `
-          <div style="border: 2px solid #1b4d3e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-family: sans-serif; background: white;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b4d3e; padding-bottom: 6px; margin-bottom: 6px;">
-              <div>
-                <h2 style="font-size: 11pt; font-weight: bold; color: #1b4d3e; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-                <p style="font-size: 8pt; color: #3b6e5f; margin:0; font-weight:600;">OFICINA DE RENTAS</p>
-              </div>
-              <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 4px 8px; border-radius: 4px; text-align: center; min-width: 130px;">
-                <div style="font-size: 8pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
-                <div style="font-size: 8pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
-              </div>
-            </div>
+page.innerHTML = grupo.map(u => {
+  const tarifaMensual = getTarifaTotal(u); // Tarifa mensual base del usuario
+  
+  let filasServicios = '';
+  if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Agua Potable</td><td style="text-align: right; padding: 3px 6px;">S/. ${u.servicios.agua.toFixed(2)} / mes</td></tr>`;
+  if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Desagüe</td><td style="text-align: right; padding: 3px 6px;">S/. ${u.servicios.desague.toFixed(2)} / mes</td></tr>`;
+  if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 3px 6px;">Servicio de Limpieza Pública</td><td style="text-align: right; padding: 3px 6px;">S/. ${u.servicios.limpieza.toFixed(2)} / mes</td></tr>`;
 
-            <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 6px; border-radius: 4px; font-size: 8pt; margin-bottom: 6px;">
-              <table style="width: 100%;">
-                <tr>
-                  <td style="font-weight: bold; color: #1b4d3e; width: 15%;">USUARIO:</td>
-                  <td style="font-weight: bold;">${u.nombre}</td>
-                  <td style="font-weight: bold; color: #1b4d3e; width: 18%;">SUMINISTRO:</td>
-                  <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
-                  <td>${u.direccion}</td>
-                  <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
-                  <td>07/08/2026</td>
-                </tr>
-              </table>
-            </div>
+  return `
+  <div style="border: 2px solid #1b4d3e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-family: sans-serif; background: white;" class="recibo-card">
+    
+    <!-- Encabezado -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b4d3e; padding-bottom: 6px; margin-bottom: 6px;">
+      <div>
+        <h2 style="font-size: 11pt; font-weight: bold; color: #1b4d3e; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+        <p style="font-size: 8pt; color: #3b6e5f; margin:0; font-weight:600;">OFICINA DE RENTAS Y RECAUDACIÓN</p>
+      </div>
+      <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 4px 8px; border-radius: 4px; text-align: center; min-width: 130px;">
+        <div style="font-size: 8pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
+        <div style="font-size: 8pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
+      </div>
+    </div>
 
-            <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 8px;">
-              <thead>
-                <tr style="background: #1b4d3e; color: white;">
-                  <th style="text-align: left; padding: 3px 6px;">SERVICIOS CONTRATADOS</th>
-                  <th style="text-align: right; padding: 3px 6px;">SUBTOTAL (S/.)</th>
-                </tr>
-              </thead>
-              <tbody>${filasServicios}</tbody>
-            </table>
+    <!-- Datos del contribuyente -->
+    <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 6px; border-radius: 4px; font-size: 8pt; margin-bottom: 6px;">
+      <table style="width: 100%;">
+        <tr>
+          <td style="font-weight: bold; color: #1b4d3e; width: 15%;">USUARIO:</td>
+          <td style="font-weight: bold;">${u.nombre}</td>
+          <td style="font-weight: bold; color: #1b4d3e; width: 18%;">SUMINISTRO:</td>
+          <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
+          <td>${u.direccion}</td>
+          <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
+          <td>07/08/2026</td>
+        </tr>
+      </table>
+    </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 8px; margin-bottom: 4px;">
-              <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 4px solid #d97706; padding: 6px 8px; border-radius: 4px; font-size: 7.5pt; max-width: 63%; display: flex; flex-direction: column; justify-content: center; gap: 3px;">
-                <div style="display: flex; align-items: flex-start; gap: 5px;">
-                  <span style="font-size: 8.5pt; line-height: 1;">⚠️</span>
-                  <span style="color: #78350f;">
-                    <strong>MESES DEUDORES (${u.numMeses}):</strong> 
-                    <span style="background: #fef3c7; color: #92400e; padding: 1px 4px; border-radius: 3px; font-weight: bold; border: 1px solid #fde68a;">
-                      ${u.mesesDeuda.join(', ')}
-                    </span>
-                  </span>
-                </div>
+    <!-- Tabla de desglose de tarifa -->
+    <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 6px;">
+      <thead>
+        <tr style="background: #1b4d3e; color: white;">
+          <th style="text-align: left; padding: 3px 6px;">DETALLE DE SERVICIOS</th>
+          <th style="text-align: right; padding: 3px 6px;">TARIFA MENSUAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasServicios}
+        <tr style="background: #f3f4f6; font-weight: bold;">
+          <td style="padding: 4px 6px; text-align: right; color: #374151;">PAGO MENSUAL TOTAL:</td>
+          <td style="padding: 4px 6px; text-align: right; color: #1b4d3e;">S/. ${tarifaMensual.toFixed(2)} / mes</td>
+        </tr>
+      </tbody>
+    </table>
 
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <span style="font-size: 8.5pt; line-height: 1;">🚨</span>
-                  <span style="color: #991b1b; font-weight: bold;">Evite el corte del servicio cancelando a tiempo.</span>
-                </div>
+    <!-- Bloque de cálculo de deuda y alertas -->
+    <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 8px; margin-bottom: 4px;">
+      <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 4px solid #d97706; padding: 6px 8px; border-radius: 4px; font-size: 7.5pt; max-width: 63%; display: flex; flex-direction: column; justify-content: center; gap: 3px;">
+        <div style="display: flex; align-items: flex-start; gap: 5px;">
+          <span style="font-size: 8.5pt; line-height: 1;">⚠️</span>
+          <span style="color: #78350f;">
+            <strong>MESES PENDIENTES (${u.numMeses}):</strong> 
+            <span style="background: #fef3c7; color: #92400e; padding: 1px 4px; border-radius: 3px; font-weight: bold; border: 1px solid #fde68a;">
+              ${u.mesesDeuda.join(', ')}
+            </span>
+          </span>
+        </div>
+        <div style="font-size: 7pt; color: #4b5563; margin-top: 2px;">
+          <em>Cálculo: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}</em>
+        </div>
+      </div>
 
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <span style="font-size: 8.5pt; line-height: 1;">📅</span>
-                  <span style="color: #1e3a8a; font-weight: 700;">Fecha de corte: 20 de cada mes.</span>
-                </div>
-              </div>
-
-              <div style="background: #1b4d3e; color: white; padding: 8px 12px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; min-width: 130px;">
-                <span style="font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Total a Pagar</span>
-                <span style="font-size: 11pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-          <div style="border-top: 1px dashed #999; margin: 8px 0; text-align: right; font-size: 7pt; color: #777;">✂ --- Cortar aquí ---</div>
-          `;
-        }).join('');
+      <!-- Cuadro de Total Final -->
+      <div style="background: #1b4d3e; color: white; padding: 8px 12px; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; min-width: 130px;">
+        <span style="font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Total a Pagar</span>
+        <span style="font-size: 11pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</span>
+      </div>
+    </div>
+  </div>
+  <div style="border-top: 1px dashed #999; margin: 8px 0; text-align: right; font-size: 7pt; color: #777;">✂ --- Cortar aquí ---</div>
+  `;
+}).join('');
 
         printArea.appendChild(page);
       }
