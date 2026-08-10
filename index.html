@@ -750,14 +750,13 @@ function ejecutarImpresion() {
       return `
       <div style="border: 2px solid #1b4d3e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-family: sans-serif; background: white;" class="recibo-card">
         
+        <!-- ENCABEZADO -->
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b4d3e; padding-bottom: 6px; margin-bottom: 6px;">
-          
           <div style="display: flex; align-items: center; gap: 8px;">
-            <!-- AQUÍ ESTÁ EL ESCUDO INTEGRADOPERFECTAMENTE -->
             <img src="${logoPath}" alt="Escudo San Roque" style="height: 44px; width: auto; object-fit: contain;">
             <div>
               <h2 style="font-size: 10.5pt; font-weight: bold; color: #1b4d3e; margin:0; line-height: 1.1;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-              <p style="font-size: 7.5pt; color: #3b6e5f; margin: 2px 0 0 0; font-weight:600;">OFICINA DE RENTAS</p>
+              <p style="font-size: 7.5pt; color: #3b6e5f; margin: 2px 0 0 0; font-weight:600;">OFICINA DE RENTAS Y SERVICIOS PÚBLICOS</p>
             </div>
           </div>
           
@@ -774,6 +773,7 @@ function ejecutarImpresion() {
           </div>
         </div>
 
+        <!-- DATOS DEL CONTRIBUYENTE + FECHA LÍMITE DE PAGO -->
         <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 6px; border-radius: 4px; font-size: 8pt; margin-bottom: 6px;">
           <table style="width: 100%;">
             <tr>
@@ -788,9 +788,16 @@ function ejecutarImpresion() {
               <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
               <td>${new Date().toLocaleDateString('es-PE')}</td>
             </tr>
+            <tr>
+              <td style="font-weight: bold; color: #b91c1c;">F. LÍMITE PAGO:</td>
+              <td style="font-weight: bold; color: #b91c1c;">20 DE CADA MES</td>
+              <td style="font-weight: bold; color: #1b4d3e;">ESTADO:</td>
+              <td style="font-weight: bold; color: #d97706;">PENDIENTE DE PAGO</td>
+            </tr>
           </table>
         </div>
 
+        <!-- SERVICIOS INCLUIDOS -->
         <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 6px;">
           <thead>
             <tr style="background: #1b4d3e; color: white;">
@@ -803,7 +810,8 @@ function ejecutarImpresion() {
           </tbody>
         </table>
 
-        <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 8px; margin-bottom: 4px;">
+        <!-- RESUMEN DE DEUDA Y TOTAL -->
+        <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 8px; margin-bottom: 6px;">
           <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 4px solid #d97706; padding: 6px 8px; border-radius: 4px; font-size: 7.5pt; max-width: 63%; display: flex; flex-direction: column; justify-content: center; gap: 3px;">
             <div style="display: flex; align-items: flex-start; gap: 5px;">
               <span style="font-size: 8.5pt; line-height: 1;">⚠️</span>
@@ -824,6 +832,12 @@ function ejecutarImpresion() {
             <span style="font-size: 11pt; font-weight: 800; color: #60a5fa;">S/. ${u.totalDeuda.toFixed(2)}</span>
           </div>
         </div>
+
+        <!-- MENSAJE / NOTA INFORMATIVA AL USUARIO -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 4px 8px; font-size: 7pt; color: #166534; text-align: center; font-weight: 500;">
+          📌 <strong>IMPORTANTE:</strong> Acérquese a cancelar en la Oficina de Rentas antes del <strong>20 de cada mes</strong> para evitar cortes de servicio. ¡Mantenerse al día nos ayuda a mejorar nuestros servicios públicos!
+        </div>
+
       </div>
       <div style="border-top: 1px dashed #999; margin: 8px 0; text-align: right; font-size: 7pt; color: #777;">✂ --- Cortar aquí ---</div>
       `;
@@ -831,10 +845,10 @@ function ejecutarImpresion() {
     printArea.appendChild(page);
   }
 
-  // 1. Mostrar el área de impresión en el DOM
+  // 1. MOSTRAR EL ÁREA DE IMPRESIÓN
   printArea.classList.remove('hidden');
 
-  // 2. Obtener la imagen del logo recién creada
+  // 2. CONTROLAR LA CARGA DE IMÁGENES
   const imagenes = printArea.querySelectorAll('img');
   const promesasCarga = [];
 
@@ -847,14 +861,14 @@ function ejecutarImpresion() {
     }
   });
 
-  // 3. Esperar a que la imagen cargue antes de mandar a imprimir
+  // 3. ESPERAR A QUE LA IMAGEN CARGUE COMPLETAMENTE ANTES DE IMPRIMIR
   Promise.all(promesasCarga).then(() => {
     setTimeout(() => {
       window.print();
       printArea.classList.add('hidden');
-    }, 150); // Pausa de 150ms para permitir que el navegador dibuje el gráfico
+    }, 150);
   });
- }
+}
     function imprimirOrdenesCorte() {
       const deudores = usuarios.filter(u => contarMesesDeuda(u) >= 2);
       if (deudores.length === 0) return alert('No hay usuarios con 2 o más meses de retraso.');
