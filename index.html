@@ -736,7 +736,8 @@
         const grupo = usuariosDeudores.slice(i, i + 3);
         const page = document.createElement('div');
         page.className = 'page-break space-y-4';
-
+// Simplemente define la URL al inicio o dentro de tu función:
+const logoPath = 'https://www.contrataciones.pe/organizaciones/licitaciones-municipalidad-de-san-roque-de-cumbaza.png';
         page.innerHTML = grupo.map(u => {
           const tarifaMensual = getTarifaTotal(u);
           
