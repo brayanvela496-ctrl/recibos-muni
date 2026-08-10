@@ -836,45 +836,67 @@
       const printArea = document.getElementById('print-area');
       printArea.innerHTML = '';
 
+      // Array para traducir los índices a nombres de meses
+      const nombresMeses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SET", "OCT", "NOV", "DIC"];
+
       for (let i = 0; i < deudores.length; i += 2) {
         const grupo = deudores.slice(i, i + 2);
         const page = document.createElement('div');
         page.className = 'page-break space-y-6';
 
         page.innerHTML = grupo.map(u => {
-          const mesesDeuda = contarMesesDeuda(u);
-          const totalDeuda = mesesDeuda * getTarifaTotal(u);
+          const tarifa = getTarifaTotal(u);
+          
+          // Extraer exactamente los nombres de los meses en deuda (donde el pago sea 0)
+          const mesesPendientes = u.pagos 
+            ? u.pagos.map((monto, idx) => Number(monto) === 0 ? nombresMeses[idx] : null).filter(m => m !== null)
+            : [];
+            
+          const cantidadMeses = mesesPendientes.length;
+          const totalDeuda = cantidadMeses * tarifa;
 
           return `
             <div style="border: 2px solid #b91c1c; border-radius: 8px; padding: 15px; background: white; font-family: sans-serif;">
+              <!-- ENCABEZADO -->
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; margin-bottom: 10px;">
                 <div>
                   <h2 style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-                  <p style="font-size: 8pt; color: #7f1d1d; margin:0; font-weight:bold;">SUBGERENCIA DE RECAUDACIÓN Y SERVICIOS PÚBLICOS</p>
+                  <p style="font-size: 8pt; color: #7f1d1d; margin:0; font-weight:bold;">OFICINA DE RENTAS</p>
                 </div>
                 <div style="background: #fef2f2; border: 2px solid #b91c1c; color: #b91c1c; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 9pt; text-align: center;">
                   🚨 NOTIFICACIÓN PREVIA DE CORTE
                 </div>
               </div>
 
-              <div style="font-size: 8.5pt; margin-bottom: 12px; line-height: 1.4;">
-                <p>
-                  <strong>SUMINISTRO:</strong> <span style="font-family: monospace;">${u.suministro}</span> | 
-                  <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-PE')}
+              <!-- DATOS DEL CONTRIBUYENTE -->
+              <div style="font-size: 8.5pt; margin-bottom: 10px; line-height: 1.4; background: #fafafa; padding: 8px; border-radius: 4px; border: 1px solid #eee;">
+                <p style="margin:0;"><strong>SUMINISTRO:</strong> <span style="font-family: monospace; font-weight: bold;">${u.suministro}</span> | <strong>FECHA EMISIÓN:</strong> ${new Date().toLocaleDateString('es-PE')}</p>
+                <p style="margin:2px 0 0 0;"><strong>CONTRIBUYENTE:</strong> ${u.nombre}</p>
+                <p style="margin:2px 0 0 0;"><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
+              </div>
+
+              <!-- DETALLE Y AVISO -->
+              <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 8px; border-radius: 4px;">
+                <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold; font-size: 8.5pt;">ASUNTO: PRIMER AVISO Y EMPLAZAMIENTO DE CORTE DE SERVICIO</p>
+                <p style="margin:0;">
+                  Por medio del presente se le notifica que registra una deuda acumulada de <strong>${cantidadMeses} meses de retraso</strong> 
+                  correspondientes a los periodos: <strong style="color: #b91c1c;">[ ${mesesPendientes.join(', ')} ]</strong>, 
+                  sumando un monto total pendiente de <strong style="font-size: 9pt; color: #b91c1c;">S/. ${totalDeuda.toFixed(2)}</strong>.
                 </p>
-                <p><strong>USUARIO:</strong> ${u.nombre}</p>
-                <p><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
+                <p style="margin:6px 0 0 0; font-weight: bold; color: #991b1b;">
+                  Se le otorga un plazo improrrogable de 24 HORAS a partir de la recepción de esta notificación para apersonarse a la Municipalidad a regularizar su pago, bajo apercibimiento de proceder al CORTE Y SUSPENSIÓN INMEDIATA DEL SERVICIO.
+                </p>
               </div>
 
-              <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 12px; border-radius: 4px;">
-                <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold;">ASUNTO: PRIMER AVISO DE CORTE DEL SERVICIO DE AGUA POTABLE</p>
-                <p style="margin:0;">Mediante el presente documento se le notifica que registra una deuda acumulada de <strong>${mesesDeuda} meses de retraso</strong>, por un monto total de <strong>S/. ${totalDeuda.toFixed(2)}</strong>.</p>
-                <p style="margin:5px 0 0 0; font-weight: bold; color: #991b1b;">Se le otorga un plazo improrrogable de 24 HORAS para apersonarse a la Municipalidad a regularizar su deuda, de lo contrario se procederá al CORTE Y SUSPENSIÓN DEL SERVICIO.</p>
+              <!-- ADVERTENCIA DE RECONEXIÓN -->
+              <div style="font-size: 7.5pt; color: #555; margin-bottom: 15px; font-style: italic;">
+                * Nota: Tras la ejecución del corte, la reconexión del servicio estará sujeta al pago total de la deuda más el derecho por reconexión técnica.
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt;">
-                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma del Notificador</div>
-                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma / DNI del Usuario</div>
+              <!-- FIRMAS -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt; margin-top: 15px;">
+                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma del Notificador / Inspector</div>
+                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma / DNI del Notificado</div>
               </div>
             </div>
             <div style="border-top: 1px dashed #aaa; margin: 15px 0;"></div>
