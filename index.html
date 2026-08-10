@@ -612,99 +612,13 @@
                 ${u.imprimir ? '🖨️ SÍ' : '🚫 NO'}
               </button>
             </td>
-            <td class="py-2 px-2 text-center border-b border-l bg-blue-50/50">
-              <button 
-                type="button"
-                onclick="imprimirReciboUnico(${u.id})"
-                title="Imprimir solo el recibo de este contribuyente"
-                class="px-2.5 py-1 rounded-md font-bold text-[11px] bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm flex items-center justify-center space-x-1 mx-auto">
-                <span>🖨️ Recibo</span>
-              </button>
-            </td>
+           
           </tr>
         `;
       }).join('');
     }
 
-    // FUNCIÓN PARA IMPRIMIR UN RECIBO ÚNICO INDIVIDUAL
-    function imprimirReciboUnico(idUsuario) {
-      const u = usuarios.find(item => item.id === idUsuario);
-      if (!u) return alert("Usuario no encontrado");
-
-      const tarifaTotal = getTarifaTotal(u);
-      const totalPendiente = u.pagos ? u.pagos.reduce((acc, curr) => Number(curr) === 0 ? acc + tarifaTotal : acc, 0) : 0;
-      
-      const nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Set", "Oct", "Nov", "Dic"];
-      const mesesPendientes = u.pagos 
-        ? u.pagos.map((monto, idx) => Number(monto) === 0 ? nombresMeses[idx] : null).filter(m => m !== null)
-        : [];
-
-      const fechaActual = new Date().toLocaleDateString('es-PE');
-
-      const ventana = window.open('', '_blank', 'width=800,height=600');
-      if (!ventana) return alert("Por favor habilite las ventanas emergentes en su navegador.");
-
-      ventana.document.write(`
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-          <meta charset="UTF-8">
-          <title>Recibo - ${u.nombre}</title>
-          <script src="https://cdn.tailwindcss.com"><\/script>
-          <style>
-            @page { size: 14cm 21cm portrait; margin: 5mm; }
-            body { font-family: sans-serif; }
-          </style>
-        </head>
-        <body class="p-4 bg-white text-gray-800">
-          <div class="border-2 border-emerald-800 p-4 rounded-lg max-w-md mx-auto space-y-3">
-            <div class="text-center border-b border-emerald-800 pb-2">
-              <h2 class="font-bold text-xs text-emerald-900 uppercase">Municipalidad Distrital de San Roque de Cumbaza</h2>
-              <p class="text-[10px] text-emerald-700 font-bold">OFICINA DE RENTAS Y SERVICIOS PÚBLICOS</p>
-              <p class="text-xs font-extrabold text-emerald-800 mt-1">RECIBO INDIVIDUAL DE PAGO</p>
-            </div>
-
-            <div class="text-xs space-y-1 bg-emerald-50/50 p-2 rounded border border-emerald-100">
-              <p><strong>SUMINISTRO:</strong> <span class="font-mono font-bold">${u.suministro}</span> | <strong>FECHA:</strong> ${fechaActual}</p>
-              <p><strong>USUARIO:</strong> ${u.nombre}</p>
-              <p><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
-            </div>
-
-            <div class="border-t border-b py-2 text-xs space-y-1">
-              <p class="font-bold text-emerald-900 text-[11px]">Servicios en la Tarifa:</p>
-              ${u.servicios?.agua > 0 ? `<div class="flex justify-between text-gray-700"><span>• Servicio de Agua Potable</span><span>S/. ${Number(u.servicios.agua).toFixed(2)}</span></div>` : ''}
-              ${u.servicios?.desague > 0 ? `<div class="flex justify-between text-gray-700"><span>• Servicio de Desagüe</span><span>S/. ${Number(u.servicios.desague).toFixed(2)}</span></div>` : ''}
-              ${u.servicios?.limpieza > 0 ? `<div class="flex justify-between text-gray-700"><span>• Limpieza Pública</span><span>S/. ${Number(u.servicios.limpieza).toFixed(2)}</span></div>` : ''}
-              <div class="flex justify-between font-bold border-t pt-1 mt-1 text-emerald-900">
-                <span>Tarifa Mensual Base:</span>
-                <span>S/. ${tarifaTotal.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div class="text-xs space-y-1">
-              <div class="flex justify-between"><span class="font-bold">Meses Deudores:</span> <span>${mesesPendientes.length > 0 ? mesesPendientes.join(', ') : 'Al Día'}</span></div>
-              <div class="flex justify-between text-sm font-extrabold text-red-700 bg-red-50 p-2 rounded border border-red-200 mt-2">
-                <span>TOTAL A PAGAR:</span>
-                <span>S/. ${totalPendiente.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div class="text-[9px] text-center text-gray-400 border-t pt-2">
-              Conserve este recibo como comprobante oficial de pago.
-            </div>
-          </div>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() { window.close(); };
-            };
-          <\/script>
-        </body>
-        </html>
-      `);
-      ventana.document.close();
-    }
+   
 
     function renderTablaCortes() {
       const deudoresCorte = usuarios.filter(u => contarMesesDeuda(u) >= 2);
