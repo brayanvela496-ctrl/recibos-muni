@@ -831,9 +831,29 @@ function ejecutarImpresion() {
     printArea.appendChild(page);
   }
 
+  // 1. Mostrar el área de impresión en el DOM
   printArea.classList.remove('hidden');
-  window.print();
-  printArea.classList.add('hidden');
+
+  // 2. Obtener la imagen del logo recién creada
+  const imagenes = printArea.querySelectorAll('img');
+  const promesasCarga = [];
+
+  imagenes.forEach(img => {
+    if (!img.complete) {
+      promesasCarga.push(new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve; // Para evitar bloqueos si la imagen falla
+      }));
+    }
+  });
+
+  // 3. Esperar a que la imagen cargue antes de mandar a imprimir
+  Promise.all(promesasCarga).then(() => {
+    setTimeout(() => {
+      window.print();
+      printArea.classList.add('hidden');
+    }, 150); // Pausa de 150ms para permitir que el navegador dibuje el gráfico
+  });
  }
     function imprimirOrdenesCorte() {
       const deudores = usuarios.filter(u => contarMesesDeuda(u) >= 2);
