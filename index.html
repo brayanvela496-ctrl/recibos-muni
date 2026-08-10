@@ -170,38 +170,56 @@
         </section>
 
         <!-- TAB 2: MATRIZ DE DEUDAS -->
-        <section id="tab-matriz" class="hidden space-y-6">
-          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <h3 class="text-base font-bold text-gray-800 mb-1">Matriz de Control de Recibos (Año 2026)</h3>
-            <p class="text-xs text-gray-500 mb-4">Haz 1 clic en el cuadrito para marcar la tarifa como pagada o volver a 0.</p>
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-left border-collapse">
-                <thead class="text-gray-700 bg-emerald-50 border-b border-emerald-200">
-                  <tr>
-                    <th class="py-3 px-2 font-bold min-w-[160px]">Contribuyente</th>
-                    <th class="py-3 px-1 text-center">Ene</th>
-                    <th class="py-3 px-1 text-center">Feb</th>
-                    <th class="py-3 px-1 text-center">Mar</th>
-                    <th class="py-3 px-1 text-center">Abr</th>
-                    <th class="py-3 px-1 text-center">May</th>
-                    <th class="py-3 px-1 text-center">Jun</th>
-                    <th class="py-3 px-1 text-center">Jul</th>
-                    <th class="py-3 px-1 text-center">Ago</th>
-                    <th class="py-3 px-1 text-center">Set</th>
-                    <th class="py-3 px-1 text-center">Oct</th>
-                    <th class="py-3 px-1 text-center">Nov</th>
-                    <th class="py-3 px-1 text-center">Dic</th>
-                    <th class="py-3 px-2 text-center bg-emerald-100 font-bold text-emerald-900 border-l">DEUDA TOTAL</th>
-                    <!-- NUEVA COLUMNA DE IMPRESIÓN -->
-                    <th class="py-3 px-2 text-center bg-emerald-200 font-bold text-emerald-950 border-l">IMPRIMIR</th>
-                  </tr>
-                </thead>
-                <tbody id="matrix-pagos-table" class="divide-y divide-gray-200"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+<section id="tab-matriz" class="hidden space-y-6">
+  <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+    
+    <!-- CABECERA CON TÍTULO Y BUSCADOR -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b pb-4">
+      <div>
+        <h3 class="text-base font-bold text-gray-800">Matriz de Control de Recibos (Año 2026)</h3>
+        <p class="text-xs text-gray-500">Haz 1 clic en el cuadrito para marcar la tarifa como pagada o volver a 0.</p>
+      </div>
 
+      <!-- BUSCADOR DE LA MATRIZ -->
+      <div class="w-full md:w-auto">
+        <input 
+          type="text" 
+          id="input-buscar-matriz" 
+          onkeyup="renderMatrizPagos()" 
+          placeholder="🔎 Buscar contribuyente o suministro..." 
+          class="w-full md:w-72 px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm"
+        >
+      </div>
+    </div>
+
+    <!-- TABLA DE LA MATRIZ -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left border-collapse">
+        <thead class="text-gray-700 bg-emerald-50 border-b border-emerald-200">
+          <tr>
+            <th class="py-3 px-2 font-bold min-w-[160px]">Contribuyente</th>
+            <th class="py-3 px-1 text-center">Ene</th>
+            <th class="py-3 px-1 text-center">Feb</th>
+            <th class="py-3 px-1 text-center">Mar</th>
+            <th class="py-3 px-1 text-center">Abr</th>
+            <th class="py-3 px-1 text-center">May</th>
+            <th class="py-3 px-1 text-center">Jun</th>
+            <th class="py-3 px-1 text-center">Jul</th>
+            <th class="py-3 px-1 text-center">Ago</th>
+            <th class="py-3 px-1 text-center">Set</th>
+            <th class="py-3 px-1 text-center">Oct</th>
+            <th class="py-3 px-1 text-center">Nov</th>
+            <th class="py-3 px-1 text-center">Dic</th>
+            <th class="py-3 px-2 text-center bg-emerald-100 font-bold text-emerald-900 border-l">DEUDA TOTAL</th>
+            <th class="py-3 px-2 text-center bg-emerald-200 font-bold text-emerald-950 border-l">INCLUIR EN MASIVA</th>
+           
+          </tr>
+        </thead>
+        <tbody id="matrix-pagos-table" class="divide-y divide-gray-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
         <!-- TAB 3: CORTES DE SERVICIO automatizados -->
         <section id="tab-cortes" class="hidden space-y-6">
           <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -530,54 +548,83 @@
       }
     }
 
-    function renderMatrizPagos() {
-      const tbody = document.getElementById('matrix-pagos-table');
-      if (!tbody) return;
+   function renderMatrizPagos() {
+  const tbody = document.getElementById('matrix-pagos-table');
+  if (!tbody) return;
 
-      tbody.innerHTML = usuarios.map(u => {
-        const tarifaTotal = getTarifaTotal(u);
-        const totalPendiente = u.pagos.reduce((acc, curr) => curr === 0 ? acc + tarifaTotal : acc, 0);
+  // Capturar el texto del buscador
+  const busqueda = (document.getElementById('input-buscar-matriz')?.value || '').toLowerCase().trim();
 
-        return `
-          <tr class="hover:bg-gray-50">
-            <td class="py-2 px-2 font-semibold border-b">
-              <div class="text-gray-800 font-bold">${u.nombre}</div>
-              <div class="text-[10px] text-gray-400 font-mono">${u.suministro} (Tarifa: S/. ${tarifaTotal})</div>
-            </td>
-            ${u.pagos.map((monto, idx) => `
-              <td class="py-2 px-1 text-center border-b">
-                <input type="number" step="0.5" value="${monto}" 
-                  onclick="alternarPagoUnClic(this, ${u.id}, ${idx})"
-                  onchange="actualizarPago(${u.id}, ${idx}, this.value)"
-                  title="1 Clic: Marca/Desmarca la tarifa completa (S/. ${tarifaTotal})"
-                  class="w-12 text-center py-1 border rounded text-xs transition-all font-bold cursor-pointer select-none ${
-                    monto > 0 
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-400 hover:bg-emerald-200' 
-                      : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              </td>
-            `).join('')}
-            <td class="py-2 px-2 text-center border-b border-l bg-emerald-50 font-bold text-red-700">
-              S/. ${totalPendiente.toFixed(2)}
-            </td>
-            <!-- 👈 COLUMNA INTERACTIVA CON BOTÓN IMPRIMIR SÍ / NO -->
-            <td class="py-2 px-2 text-center border-b border-l bg-emerald-50/50">
-              <button 
-                type="button"
-                onclick="toggleImpresionUsuario(${u.id})"
-                title="${u.imprimir ? 'Click para desactivar la impresión de este usuario' : 'Click para activar la impresión de este usuario'}"
-                class="px-2.5 py-1 rounded-full font-bold text-[11px] transition-all shadow-sm ${
-                  u.imprimir 
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-500'
-                }">
-                ${u.imprimir ? '🖨️ SÍ' : '🚫 NO'}
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
+  // Filtrar usuarios que coincidan con la búsqueda (por nombre o suministro)
+  const usuariosFiltrados = usuarios.filter(u => {
+    if (busqueda === '') return true;
+    const texto = `${u.nombre} ${u.suministro}`.toLowerCase();
+    return texto.includes(busqueda);
+  });
+
+  if (usuariosFiltrados.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="16" class="py-6 text-center text-gray-400 font-medium">
+          No se encontró ningún contribuyente con ese nombre o suministro.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = usuariosFiltrados.map(u => {
+    const tarifaTotal = getTarifaTotal(u);
+    const totalPendiente = u.pagos.reduce((acc, curr) => curr === 0 ? acc + tarifaTotal : acc, 0);
+
+    return `
+      <tr class="hover:bg-gray-50">
+        <td class="py-2 px-2 font-semibold border-b">
+          <div class="text-gray-800 font-bold">${u.nombre}</div>
+          <div class="text-[10px] text-gray-400 font-mono">${u.suministro} (Tarifa: S/. ${tarifaTotal})</div>
+        </td>
+        ${u.pagos.map((monto, idx) => `
+          <td class="py-2 px-1 text-center border-b">
+            <input type="number" step="0.5" value="${monto}" 
+              onclick="alternarPagoUnClic(this, ${u.id}, ${idx})"
+              onchange="actualizarPago(${u.id}, ${idx}, this.value)"
+              title="1 Clic: Marca/Desmarca la tarifa completa (S/. ${tarifaTotal})"
+              class="w-12 text-center py-1 border rounded text-xs transition-all font-bold cursor-pointer select-none ${
+                monto > 0 
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-400 hover:bg-emerald-200' 
+                  : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+              } focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </td>
+        `).join('')}
+        <td class="py-2 px-2 text-center border-b border-l bg-emerald-50 font-bold text-red-700">
+          S/. ${totalPendiente.toFixed(2)}
+        </td>
+        <td class="py-2 px-2 text-center border-b border-l bg-emerald-50/50">
+          <button 
+            type="button"
+            onclick="toggleImpresionUsuario(${u.id})"
+            title="${u.imprimir ? 'Click para deshabilitar en la impresión masiva' : 'Click para habilitar en la impresión masiva'}"
+            class="px-2.5 py-1 rounded-full font-bold text-[11px] transition-all shadow-sm ${
+              u.imprimir 
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-500'
+            }">
+            ${u.imprimir ? '🖨️ SÍ' : '🚫 NO'}
+          </button>
+        </td>
+        <td class="py-2 px-2 text-center border-b border-l bg-blue-50/50">
+          <button 
+            type="button"
+            onclick="imprimirReciboUnico(${u.id})"
+            title="Imprimir solo el recibo de este contribuyente"
+            class="px-2.5 py-1 rounded-md font-bold text-[11px] bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm flex items-center justify-center space-x-1 mx-auto">
+            
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
 
     function renderTablaCortes() {
       const deudoresCorte = usuarios.filter(u => contarMesesDeuda(u) >= 2);
@@ -815,11 +862,14 @@
                 </div>
               </div>
 
-              <div style="font-size: 8.5pt; margin-bottom: 12px; line-height: 1.4;">
-                <p><strong>SUMINISTRO:</strong> <span style="font-family: monospace;">${u.suministro}</span> | <strong>FECHA:</strong> 07/08/2026</p>
-                <p><strong>USUARIO:</strong> ${u.nombre}</p>
-                <p><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
-              </div>
+             <div style="font-size: 8.5pt; margin-bottom: 12px; line-height: 1.4;">
+  <p>
+    <strong>SUMINISTRO:</strong> <span style="font-family: monospace;">${u.suministro}</span> | 
+    <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-PE')}
+  </p>
+  <p><strong>USUARIO:</strong> ${u.nombre}</p>
+  <p><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
+</div>
 
               <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 12px; border-radius: 4px;">
                 <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold;">ASUNTO: PRIMER AVISO DE CORTE DEL SERVICIO DE AGUA POTABLE</p>
@@ -843,6 +893,9 @@
       window.print();
       printArea.classList.add('hidden');
     }
+    ${new Date().toLocaleString('es-PE')} 
+// Resultado: 09/08/2026, 20:43:00
   </script>
+  
 </body>
 </html>
