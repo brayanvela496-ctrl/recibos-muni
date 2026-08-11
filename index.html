@@ -337,46 +337,50 @@
       cargarUsuariosDesdeSupabase();
     });
 
-    async function cargarUsuariosDesdeSupabase() {
-      let todosLosUsuarios = [];
-      let desde = 0;
-      const paso = 200; 
-      let hayMasDatos = true;
+   async function cargarUsuariosDesdeSupabase() {
+  let todosLosUsuarios = [];
+  let desde = 0;
+  const paso = 200; 
+  let hayMasDatos = true;
 
-      while (hayMasDatos) {
-        const { data, error } = await _supabase
-          .from('contribuyentes')
-          .select('*')
-          .range(desde, desde + paso - 1)
-          .order('id', { ascending: true });
+  while (hayMasDatos) {
+    const { data, error } = await _supabase
+      .from('contribuyentes')
+      .select('*')
+      .range(desde, desde + paso - 1)
+      .order('id', { ascending: true });
 
-        if (error) {
-          console.error('Error al cargar datos de Supabase:', error);
-          alert('Error al conectar con Supabase: ' + error.message);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          todosLosUsuarios = todosLosUsuarios.concat(data);
-          desde += data.length;
-
-          if (data.length < paso) {
-            hayMasDatos = false;
-          }
-        } else {
-          hayMasDatos = false;
-        }
-      }
-
-      usuarios = todosLosUsuarios.map(u => ({
-        ...u,
-        servicios: u.servicios || { agua: 5, desague: 5, limpieza: 5 },
-        pagos: u.pagos || new Array(12).fill(0),
-        imprimir: u.imprimir !== undefined ? u.imprimir : true // 👈 Estado predeterminado para imprimir (SÍ)
-      }));
-
-      renderAll();
+    if (error) {
+      console.error('Error al cargar datos de Supabase:', error);
+      alert('Error al conectar con Supabase: ' + error.message);
+      return;
     }
+
+    if (data && data.length > 0) {
+      todosLosUsuarios = todosLosUsuarios.concat(data);
+      desde += data.length;
+
+      if (data.length < paso) {
+        hayMasDatos = false;
+      }
+    } else {
+      hayMasDatos = false;
+    }
+  }
+
+  // Obtener la lista de usuarios deshabilitados desde la memoria local (localStorage)
+  const noImprimirIds = JSON.parse(localStorage.getItem('noImprimirIds') || '[]');
+
+  usuarios = todosLosUsuarios.map(u => ({
+    ...u,
+    servicios: u.servicios || { agua: 5, desague: 5, limpieza: 5 },
+    pagos: u.pagos || new Array(12).fill(0),
+    // Si el ID del usuario está guardado en la lista de NO imprimir, se asigna false
+    imprimir: !noImprimirIds.includes(u.id)
+  }));
+
+  renderAll();
+}
 
     function getTarifaTotal(user) {
       const s = user.servicios || {};
@@ -541,11 +545,31 @@
 
    // 👈 NUEVA FUNCIÓN PARA ALTERNAR ESTADO DE IMPRESIÓN
     function toggleImpresionUsuario(userId) {
-      const user = usuarios.find(u => u.id === userId);
-      if (user) {
-        user.imprimir = !user.imprimir;
-        renderMatrizPagos();
-      }
+  const user = usuarios.find(u => u.id === userId);
+  if (!user) return;
+
+  // Cambiar el valor visual en el estado local
+  user.imprimir = !user.imprimir;
+
+  // Leer la lista actual guardada en el navegador
+  let noImprimirIds = JSON.parse(localStorage.getItem('noImprimirIds') || '[]');
+
+  if (!user.imprimir) {
+    // Si cambió a NO, guardamos su ID para recordarlo
+    if (!noImprimirIds.includes(userId)) {
+      noImprimirIds.push(userId);
+    }
+  } else {
+    // Si volvió a SÍ, quitamos su ID de la lista
+    noImprimirIds = noImprimirIds.filter(id => id !== userId);
+  }
+
+  // Guardar la lista actualizada en la memoria del navegador
+  localStorage.setItem('noImprimirIds', JSON.stringify(noImprimirIds));
+
+  // Volver a renderizar la tabla
+  renderMatrizPagos();
+}
     }
 
     function renderMatrizPagos() {
