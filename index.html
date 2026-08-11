@@ -544,32 +544,32 @@
     }
 
    // 👈 NUEVA FUNCIÓN PARA ALTERNAR ESTADO DE IMPRESIÓN
+   // 👈 FUNCIÓN PARA ALTERNAR ESTADO DE IMPRESIÓN CON PERSISTENCIA
     function toggleImpresionUsuario(userId) {
-  const user = usuarios.find(u => u.id === userId);
-  if (!user) return;
+      const user = usuarios.find(u => u.id === userId);
+      if (!user) return;
 
-  // Cambiar el valor visual en el estado local
-  user.imprimir = !user.imprimir;
+      // Cambiar el valor visual en el estado local
+      user.imprimir = !user.imprimir;
 
-  // Leer la lista actual guardada en el navegador
-  let noImprimirIds = JSON.parse(localStorage.getItem('noImprimirIds') || '[]');
+      // Leer la lista actual guardada en el navegador
+      let noImprimirIds = JSON.parse(localStorage.getItem('noImprimirIds') || '[]');
 
-  if (!user.imprimir) {
-    // Si cambió a NO, guardamos su ID para recordarlo
-    if (!noImprimirIds.includes(userId)) {
-      noImprimirIds.push(userId);
-    }
-  } else {
-    // Si volvió a SÍ, quitamos su ID de la lista
-    noImprimirIds = noImprimirIds.filter(id => id !== userId);
-  }
+      if (!user.imprimir) {
+        // Si cambió a NO, guardamos su ID para recordarlo
+        if (!noImprimirIds.includes(userId)) {
+          noImprimirIds.push(userId);
+        }
+      } else {
+        // Si volvió a SÍ, quitamos su ID de la lista
+        noImprimirIds = noImprimirIds.filter(id => id !== userId);
+      }
 
-  // Guardar la lista actualizada en la memoria del navegador
-  localStorage.setItem('noImprimirIds', JSON.stringify(noImprimirIds));
+      // Guardar la lista actualizada en la memoria del navegador
+      localStorage.setItem('noImprimirIds', JSON.stringify(noImprimirIds));
 
-  // Volver a renderizar la tabla
-  renderMatrizPagos();
-}
+      // Volver a renderizar la tabla de la matriz de pagos
+      renderMatrizPagos();
     }
 
     function renderMatrizPagos() {
@@ -636,13 +636,10 @@
                 ${u.imprimir ? '🖨️ SÍ' : '🚫 NO'}
               </button>
             </td>
-           
           </tr>
         `;
       }).join('');
     }
-
-   
 
     function renderTablaCortes() {
       const deudoresCorte = usuarios.filter(u => contarMesesDeuda(u) >= 2);
@@ -722,173 +719,173 @@
     function abrirModalImpresion() { document.getElementById('modal-impresion').classList.remove('hidden'); }
     function cerrarModalImpresion() { document.getElementById('modal-impresion').classList.add('hidden'); }
 
-function ejecutarImpresion() {
-  const desde = parseInt(document.getElementById('select-mes-desde').value);
-  const hasta = parseInt(document.getElementById('select-mes-hasta').value);
+    function ejecutarImpresion() {
+      const desde = parseInt(document.getElementById('select-mes-desde').value);
+      const hasta = parseInt(document.getElementById('select-mes-hasta').value);
 
-  if (desde > hasta) {
-    alert('El mes "Desde" no puede ser posterior al mes "Hasta".');
-    return;
-  }
-
-  const usuariosDeudores = usuarios
-    .filter(u => u.imprimir) 
-    .map(u => {
-      let mesesDeuda = [];
-      const tarifa = getTarifaTotal(u);
-
-      for (let m = desde; m <= hasta; m++) {
-        if (u.pagos[m] === 0) mesesDeuda.push(MESES[m].toUpperCase());
+      if (desde > hasta) {
+        alert('El mes "Desde" no puede ser posterior al mes "Hasta".');
+        return;
       }
 
-      return { ...u, mesesDeuda, totalDeuda: mesesDeuda.length * tarifa, numMeses: mesesDeuda.length };
-    }).filter(u => u.mesesDeuda.length > 0);
+      const usuariosDeudores = usuarios
+        .filter(u => u.imprimir) 
+        .map(u => {
+          let mesesDeuda = [];
+          const tarifa = getTarifaTotal(u);
 
-  if (usuariosDeudores.length === 0) {
-    alert('¡No hay usuarios habilitados para imprimir o están al día en el rango seleccionado!');
-    cerrarModalImpresion();
-    return;
-  }
+          for (let m = desde; m <= hasta; m++) {
+            if (u.pagos[m] === 0) mesesDeuda.push(MESES[m].toUpperCase());
+          }
 
-  cerrarModalImpresion();
-  const printArea = document.getElementById('print-area');
-  printArea.innerHTML = '';
-  const etiquetaRango = (desde === hasta) ? MESES[desde].toUpperCase() : `${MESES[desde].toUpperCase()} A ${MESES[hasta].toUpperCase()}`;
+          return { ...u, mesesDeuda, totalDeuda: mesesDeuda.length * tarifa, numMeses: mesesDeuda.length };
+        }).filter(u => u.mesesDeuda.length > 0);
 
-  const logoPath = './logo.png';
+      if (usuariosDeudores.length === 0) {
+        alert('¡No hay usuarios habilitados para imprimir o están al día en el rango seleccionado!');
+        cerrarModalImpresion();
+        return;
+      }
 
-  for (let i = 0; i < usuariosDeudores.length; i += 3) {
-    const grupo = usuariosDeudores.slice(i, i + 3);
-    const page = document.createElement('div');
-    // Estilos para forzar el salto de página exacto y centrar contenido en A4
-    page.className = 'page-break';
-    page.style.cssText = 'display: flex; flex-direction: column; justify-content: space-between; height: 100vh; padding: 5mm 0; box-sizing: border-box;';
+      cerrarModalImpresion();
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+      const etiquetaRango = (desde === hasta) ? MESES[desde].toUpperCase() : `${MESES[desde].toUpperCase()} A ${MESES[hasta].toUpperCase()}`;
 
-    page.innerHTML = grupo.map(u => {
-      const tarifaMensual = getTarifaTotal(u);
-      
-      let filasServicios = '';
-      if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Agua Potable</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.agua.toFixed(2)}</td></tr>`;
-      if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Desagüe</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.desague.toFixed(2)}</td></tr>`;
-      if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Limpieza Pública</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.limpieza.toFixed(2)}</td></tr>`;
+      const logoPath = './logo.png';
 
-      return `
-      <div style="border: 1.5px solid #1b4d3e; border-radius: 6px; padding: 6px 10px; margin: 0 auto; width: 98%; font-family: sans-serif; background: white; box-sizing: border-box;" class="recibo-card">
-        
-        <!-- ENCABEZADO REORGANIZADO -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #1b4d3e; padding-bottom: 4px; margin-bottom: 4px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <img src="${logoPath}" alt="Escudo San Roque" style="height: 36px; width: auto; object-fit: contain;">
-            <div>
-              <h2 style="font-size: 9.5pt; font-weight: bold; color: #1b4d3e; margin:0; line-height: 1;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-              <p style="font-size: 6.8pt; color: #3b6e5f; margin: 1px 0 0 0; font-weight: 600;">OFICINA DE RENTAS</p>
-            </div>
-          </div>
+      for (let i = 0; i < usuariosDeudores.length; i += 3) {
+        const grupo = usuariosDeudores.slice(i, i + 3);
+        const page = document.createElement('div');
+        page.className = 'page-break';
+        page.style.cssText = 'display: flex; flex-direction: column; justify-content: space-between; height: 100vh; padding: 5mm 0; box-sizing: border-box;';
+
+        page.innerHTML = grupo.map(u => {
+          const tarifaMensual = getTarifaTotal(u);
           
-          <div style="display: flex; gap: 4px;">
-            <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 90px;">
-              <div style="font-size: 6.5pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
-              <div style="font-size: 7.5pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
+          let filasServicios = '';
+          if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Agua Potable</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.agua.toFixed(2)}</td></tr>`;
+          if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Desagüe</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.desague.toFixed(2)}</td></tr>`;
+          if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Limpieza Pública</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.limpieza.toFixed(2)}</td></tr>`;
+
+          return `
+          <div style="border: 1.5px solid #1b4d3e; border-radius: 6px; padding: 6px 10px; margin: 0 auto; width: 98%; font-family: sans-serif; background: white; box-sizing: border-box;" class="recibo-card">
+            
+            <!-- ENCABEZADO -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #1b4d3e; padding-bottom: 4px; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <img src="${logoPath}" alt="Escudo San Roque" style="height: 36px; width: auto; object-fit: contain;">
+                <div>
+                  <h2 style="font-size: 9.5pt; font-weight: bold; color: #1b4d3e; margin:0; line-height: 1;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+                  <p style="font-size: 6.8pt; color: #3b6e5f; margin: 1px 0 0 0; font-weight: 600;">OFICINA DE RENTAS</p>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 4px;">
+                <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 90px;">
+                  <div style="font-size: 6.5pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
+                  <div style="font-size: 7.5pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
+                </div>
+
+                <div style="border: 1px solid #1b4d3e; background: #1b4d3e; color: white; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 85px;">
+                  <div style="font-size: 6pt; text-transform: uppercase; opacity: 0.9;">Pago Mensual Base</div>
+                  <div style="font-size: 9pt; font-weight: 800; color: #ffffff;">S/. ${tarifaMensual.toFixed(2)}</div>
+                </div>
+              </div>
             </div>
 
-            <div style="border: 1px solid #1b4d3e; background: #1b4d3e; color: white; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 85px;">
-              <div style="font-size: 6pt; text-transform: uppercase; opacity: 0.9;">Pago Mensual Base</div>
-              <div style="font-size: 9pt; font-weight: 800; color: #ffffff;">S/. ${tarifaMensual.toFixed(2)}</div>
+            <!-- DATOS DEL CONTRIBUYENTE COMPACTO -->
+            <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 4px 6px; border-radius: 3px; font-size: 7.5pt; margin-bottom: 4px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="font-weight: bold; color: #1b4d3e; width: 12%;">USUARIO:</td>
+                  <td style="font-weight: bold; width: 48%;">${u.nombre}</td>
+                  <td style="font-weight: bold; color: #1b4d3e; width: 16%;">SUMINISTRO:</td>
+                  <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
+                  <td>${u.direccion}</td>
+                  <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
+                  <td>${new Date().toLocaleDateString('es-PE')}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold; color: #b91c1c;">F. LÍMITE:</td>
+                  <td style="font-weight: bold; color: #b91c1c;">20 DE CADA MES</td>
+                  <td style="font-weight: bold; color: #1b4d3e;">ESTADO:</td>
+                  <td style="font-weight: bold; color: #d97706;">PENDIENTE DE PAGO</td>
+                </tr>
+              </table>
             </div>
+
+            <!-- TABLA DE SERVICIOS -->
+            <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
+              <thead>
+                <tr style="background: #1b4d3e; color: white;">
+                  <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
+                  <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filasServicios}
+              </tbody>
+            </table>
+
+            <!-- RESUMEN Y DEUDA -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
+              <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%;">
+                <div style="color: #78350f;">
+                  <strong>MESES DEUDORES (${u.numMeses}):</strong> 
+                  <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
+                    ${u.mesesDeuda.join(', ')}
+                  </span>
+                </div>
+                <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
+                  Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
+                </div>
+              </div>
+
+              <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
+                <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
+                <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
+              </div>
+            </div>
+
+            <!-- MENSAJE DE AVISO -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
+              📌 <strong>IMPORTANTE:</strong> Cancelar en la Oficina de Rentas antes del <strong>20 de cada mes</strong> para evitar cortes de servicio.
+            </div>
+
           </div>
-        </div>
+          <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂ ------------------------------------------------------------------------------------------------------ ✂</div>
+          `;
+        }).join('');
+        printArea.appendChild(page);
+      }
 
-        <!-- DATOS DEL CONTRIBUYENTE COMPACTO -->
-        <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 4px 6px; border-radius: 3px; font-size: 7.5pt; margin-bottom: 4px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="font-weight: bold; color: #1b4d3e; width: 12%;">USUARIO:</td>
-              <td style="font-weight: bold; width: 48%;">${u.nombre}</td>
-              <td style="font-weight: bold; color: #1b4d3e; width: 16%;">SUMINISTRO:</td>
-              <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
-              <td>${u.direccion}</td>
-              <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
-              <td>${new Date().toLocaleDateString('es-PE')}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #b91c1c;">F. LÍMITE:</td>
-              <td style="font-weight: bold; color: #b91c1c;">20 DE CADA MES</td>
-              <td style="font-weight: bold; color: #1b4d3e;">ESTADO:</td>
-              <td style="font-weight: bold; color: #d97706;">PENDIENTE DE PAGO</td>
-            </tr>
-          </table>
-        </div>
+      // MOSTRAR Y ESPERAR CARGA DE IMÁGENES
+      printArea.classList.remove('hidden');
 
-        <!-- TABLA DE SERVICIOS -->
-        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
-          <thead>
-            <tr style="background: #1b4d3e; color: white;">
-              <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
-              <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filasServicios}
-          </tbody>
-        </table>
+      const imagenes = printArea.querySelectorAll('img');
+      const promesasCarga = [];
 
-        <!-- RESUMEN Y DEUDA -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
-          <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%;">
-            <div style="color: #78350f;">
-              <strong>MESES DEUDORES (${u.numMeses}):</strong> 
-              <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
-                ${u.mesesDeuda.join(', ')}
-              </span>
-            </div>
-            <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
-              Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
-            </div>
-          </div>
+      imagenes.forEach(img => {
+        if (!img.complete) {
+          promesasCarga.push(new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }));
+        }
+      });
 
-          <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
-            <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
-            <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <!-- MENSAJE DE AVISO -->
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
-          📌 <strong>IMPORTANTE:</strong> Cancelar en la Oficina de Rentas antes del <strong>20 de cada mes</strong> para evitar cortes de servicio.
-        </div>
-
-      </div>
-      <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂ ------------------------------------------------------------------------------------------------------ ✂</div>
-      `;
-    }).join('');
-    printArea.appendChild(page);
-  }
-
-  // MOSTRAR Y ESPERAR CARGA DE IMÁGENES
-  printArea.classList.remove('hidden');
-
-  const imagenes = printArea.querySelectorAll('img');
-  const promesasCarga = [];
-
-  imagenes.forEach(img => {
-    if (!img.complete) {
-      promesasCarga.push(new Promise(resolve => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      }));
+      Promise.all(promesasCarga).then(() => {
+        setTimeout(() => {
+          window.print();
+          printArea.classList.add('hidden');
+        }, 150);
+      });
     }
-  });
 
-  Promise.all(promesasCarga).then(() => {
-    setTimeout(() => {
-      window.print();
-      printArea.classList.add('hidden');
-    }, 150);
-  });
-}
     function imprimirOrdenesCorte() {
       const deudores = usuarios.filter(u => contarMesesDeuda(u) >= 2);
       if (deudores.length === 0) return alert('No hay usuarios con 2 o más meses de retraso.');
@@ -896,7 +893,6 @@ function ejecutarImpresion() {
       const printArea = document.getElementById('print-area');
       printArea.innerHTML = '';
 
-      // Array para traducir los índices a nombres de meses
       const nombresMeses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SET", "OCT", "NOV", "DIC"];
 
       for (let i = 0; i < deudores.length; i += 2) {
@@ -907,7 +903,6 @@ function ejecutarImpresion() {
         page.innerHTML = grupo.map(u => {
           const tarifa = getTarifaTotal(u);
           
-          // Extraer exactamente los nombres de los meses en deuda (donde el pago sea 0)
           const mesesPendientes = u.pagos 
             ? u.pagos.map((monto, idx) => Number(monto) === 0 ? nombresMeses[idx] : null).filter(m => m !== null)
             : [];
