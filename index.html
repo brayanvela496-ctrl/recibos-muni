@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -821,45 +822,50 @@
             </div>
 
             <!-- TABLA DE SERVICIOS -->
-            <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
-              <thead>
-                <tr style="background: #1b4d3e; color: white;">
-                  <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
-                  <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filasServicios}
-              </tbody>
-            </table>
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
+          <thead>
+            <tr style="background: #1b4d3e; color: white;">
+              <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
+              <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filasServicios}
+          </tbody>
+        </table>
 
-            <!-- RESUMEN Y DEUDA -->
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
-              <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%;">
-                <div style="color: #78350f;">
-                  <strong>MESES DEUDORES (${u.numMeses}):</strong> 
-                  <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
-                    ${u.mesesDeuda.join(', ')}
-                  </span>
-                </div>
-                <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
-                  Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
-                </div>
+        <!-- RESUMEN DE DEUDA CON CARITA TRISTE GRANDE -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
+          
+          <!-- CAJA DE MESES CON CARITA GRANDE INTEGRADA -->
+          <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%; display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 22pt; line-height: 1; text-align: center; min-width: 32px;">😢</div>
+            <div>
+              <div style="color: #78350f; font-weight: bold;">
+                MESES DEUDORES (${u.numMeses}): 
+                <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
+                  ${u.mesesDeuda.join(', ')}
+                </span>
               </div>
-
-              <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
-                <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
-                <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
+              <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
+                Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
               </div>
             </div>
-
-            <!-- MENSAJE DE AVISO -->
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
-              💡 <strong>¡SU PAGO PUNTUAL HACE LA DIFERENCIA!</strong> Cancela en la Oficina de Rentas antes del <strong>20 de cada mes</strong>, evita la suspensión del servicio y contribuye al desarrollo de San Roque.
-            </div>
-
           </div>
-          <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂ ------------------------------------------------------------------------------------------------------ ✂</div>
+
+          <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
+            <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
+            <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
+          </div>
+        </div>
+
+        <!-- MENSAJE DE AVISO -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
+          📌 <strong>IMPORTANTE:</strong> Cancelar en la Oficina de Rentas antes del <strong>20 de cada mes</strong> para evitar cortes de servicio.
+        </div>
+
+      </div>
+      <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂️ ------------------------------------------------------------------------------------------------------ ✂️</div>
           `;
         }).join('');
         printArea.appendChild(page);
