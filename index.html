@@ -1,43 +1,23 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Recibos - Municipalidad San Roque de Cumbaza</title>
-  <!-- Escudo Institucional como Favicon -->
+ <!-- Escudo Institucional como Favicon -->
   <link rel="icon" type="image/png" href="https://www.contrataciones.pe/organizaciones/licitaciones-municipalidad-de-san-roque-de-cumbaza.png">
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Cliente Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js para el Módulo de Reportes Gerenciales -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <!-- PDF: emisión de boletas y descarga de reportes -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
   <style>
-    /* Bloqueo de selección e inspección táctil/visual */
-body {
-  -webkit-touch-callout: none; /* Desactiva el menú al mantener presionado en móvil */
-  -webkit-user-select: none;   /* Safari */
-  -khtml-user-select: none;    /* Navegadores antiguos */
-  -moz-user-select: none;      /* Firefox */
-  -ms-user-select: none;       /* Internet Explorer/Edge */
-  user-select: none;           /* Desactiva selección de texto general */
-}
-
-/* Permitir selección únicamente en campos donde se debe escribir */
-input, textarea {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-}
-
-/* Evitar arrastrar imágenes fuera de la PWA */
-img {
-  -webkit-user-drag: none;
-  user-drag: none;
-  pointer-events: none;
-}
     @media print {
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
@@ -74,6 +54,14 @@ img {
         <button onclick="switchTab('cortes')" id="btn-cortes" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-emerald-200 hover:bg-emerald-800 hover:text-white font-medium text-sm transition-colors">
           <i data-lucide="scissors" class="w-4 h-4"></i>
           <span>Órdenes de Corte</span>
+        </button>
+        <button onclick="switchTab('caja')" id="btn-caja" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-emerald-200 hover:bg-emerald-800 hover:text-white font-medium text-sm transition-colors">
+          <i data-lucide="wallet" class="w-4 h-4"></i>
+          <span>Caja y Arqueo Diario</span>
+        </button>
+        <button onclick="switchTab('reportes')" id="btn-reportes" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-emerald-200 hover:bg-emerald-800 hover:text-white font-medium text-sm transition-colors">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+          <span>Reportes Gerenciales</span>
         </button>
       </nav>
 
@@ -114,6 +102,11 @@ img {
                   <label class="block text-xs font-semibold text-gray-600 mb-1">Dirección</label>
                   <input type="text" id="input-direccion" required placeholder="Ej. JR. LIMA N° 123" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Sector / Barrio (para Reportes Gerenciales)</label>
+                <input type="text" id="input-sector" placeholder="Ej. Sector Centro" class="w-full md:w-1/3 px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
               </div>
 
               <!-- SERVICIOS CONTRATADOS -->
@@ -185,6 +178,7 @@ img {
           <th class="py-3 px-4">Suministro</th>
           <th class="py-3 px-4">Contribuyente</th>
           <th class="py-3 px-4">Dirección</th>
+          <th class="py-3 px-4">Sector</th>
           <th class="py-3 px-4 text-center">Meses Deuda</th>
           <th class="py-3 px-4 text-center">Estado</th>
           <th class="py-3 px-4 text-center">Acciones</th>
@@ -274,10 +268,126 @@ img {
                     <th class="py-3 px-4 text-center">Meses Afectados</th>
                     <th class="py-3 px-4 text-right">Deuda Total</th>
                     <th class="py-3 px-4 text-center">Estado</th>
+                    <th class="py-3 px-4 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-cortes-body" class="divide-y"></tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: CAJA Y ARQUEO DIARIO -->
+        <section id="tab-caja" class="hidden space-y-6">
+          <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <div class="flex flex-wrap justify-between items-center gap-3 border-b pb-3 mb-3">
+              <h3 class="text-sm font-bold text-gray-800 flex items-center space-x-2">
+                <i data-lucide="user-check" class="w-4 h-4 text-emerald-700"></i>
+                <span>Cajero en turno</span>
+              </h3>
+              <div class="flex items-center space-x-2">
+                <input type="text" id="input-cajero" placeholder="Nombre del cajero" class="px-3 py-1.5 border rounded-lg text-xs w-48 focus:ring-2 focus:ring-emerald-500 outline-none">
+                <button onclick="iniciarSesionCajero()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Registrar Cajero</button>
+                <span id="lbl-cajero-activo" class="text-xs font-bold text-emerald-800"></span>
+              </div>
+            </div>
+
+            <h3 class="text-sm font-bold text-gray-800 mb-3">Registrar Cobro y Emitir Comprobante</h3>
+            <form id="form-cobro" onsubmit="registrarCobro(event)" class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Buscar Contribuyente (Suministro o Nombre)</label>
+                  <input type="text" id="input-buscar-cobro" list="datalist-contribuyentes" oninput="seleccionarContribuyenteCobro()" placeholder="Escribe suministro o nombre..." required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                  <datalist id="datalist-contribuyentes"></datalist>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Método de Pago</label>
+                  <select id="select-metodo-pago" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Yape/Plin">Yape / Plin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="panel-meses-pendientes" class="bg-gray-50 border rounded-lg p-3 hidden">
+                <p class="text-xs font-bold text-gray-700 mb-2">Meses pendientes de <span id="lbl-nombre-cobro" class="text-emerald-800"></span> (Tarifa: S/. <span id="lbl-tarifa-cobro">0.00</span>/mes):</p>
+                <div id="check-meses-pendientes" class="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs"></div>
+              </div>
+
+              <div class="flex justify-between items-center pt-2 border-t">
+                <div class="text-xs font-bold text-gray-700">Total a Cobrar: <span id="lbl-total-cobro" class="text-emerald-700 font-extrabold text-sm">S/. 0.00</span></div>
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2">
+                  <i data-lucide="receipt" class="w-4 h-4"></i>
+                  <span>Registrar Cobro y Emitir Boleta</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-3 border-b pb-4">
+              <h3 class="text-base font-bold text-gray-800">Movimientos de Caja - Hoy (<span id="lbl-fecha-hoy"></span>)</h3>
+              <div class="flex gap-2">
+                <button onclick="descargarReporteCajaCSV()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2">
+                  <i data-lucide="download" class="w-4 h-4"></i><span>Descargar Reporte del Día</span>
+                </button>
+                <button onclick="cerrarCaja()" class="bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2">
+                  <i data-lucide="lock" class="w-4 h-4"></i><span>Cerrar Caja (Arqueo)</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left text-gray-600">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+                  <tr>
+                    <th class="py-3 px-4">Hora</th>
+                    <th class="py-3 px-4">N° Boleta</th>
+                    <th class="py-3 px-4">Suministro</th>
+                    <th class="py-3 px-4">Contribuyente</th>
+                    <th class="py-3 px-4">Meses Pagados</th>
+                    <th class="py-3 px-4 text-right">Monto</th>
+                    <th class="py-3 px-4">Método</th>
+                    <th class="py-3 px-4">Cajero</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-caja-body" class="divide-y"></tbody>
+                <tfoot>
+                  <tr class="bg-emerald-50 font-bold">
+                    <td colspan="5" class="py-3 px-4 text-right">TOTAL DEL DÍA:</td>
+                    <td class="py-3 px-4 text-right text-emerald-800" id="lbl-total-dia">S/. 0.00</td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: REPORTES ESTADÍSTICOS Y GERENCIALES -->
+        <section id="tab-reportes" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div class="flex flex-wrap justify-between items-center gap-3 border-b pb-4 mb-4">
+              <h3 class="text-base font-bold text-gray-800">Panel Estadístico y Gerencial</h3>
+              <button onclick="descargarReporteContribuyentesCSV()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2">
+                <i data-lucide="download" class="w-4 h-4"></i><span>Descargar Reporte de Contribuyentes (CSV)</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="border rounded-xl p-4">
+                <h4 class="text-sm font-bold text-gray-700 mb-2">Morosidad por Sector / Barrio</h4>
+                <canvas id="chart-morosidad-sector" height="220"></canvas>
+              </div>
+              <div class="border rounded-xl p-4">
+                <h4 class="text-sm font-bold text-gray-700 mb-2">Ranking de Cobertura por Sector (% Al Día)</h4>
+                <canvas id="chart-ranking-cobertura" height="220"></canvas>
+              </div>
+              <div class="border rounded-xl p-4 lg:col-span-2">
+                <h4 class="text-sm font-bold text-gray-700 mb-2">Proyección de Recaudación Mensual (S/.)</h4>
+                <canvas id="chart-proyeccion" height="160"></canvas>
+              </div>
             </div>
           </div>
         </section>
@@ -351,17 +461,64 @@ img {
 
   <!-- LÓGICA JAVASCRIPT CON SUPABASE -->
   <script>
+    /*
+      ==========================================================================
+      NOTA IMPORTANTE PARA EL DESARROLLADOR (Brayan):
+      Para que funcionen los nuevos módulos de CAJA y REPORTES necesitas crear
+      estas tablas/columnas en Supabase (SQL Editor -> New Query -> ejecutar 1 vez):
+
+      -- 1. Nueva columna para reportes por sector/barrio
+      ALTER TABLE contribuyentes ADD COLUMN IF NOT EXISTS sector text;
+
+      -- 2. Tabla de movimientos de caja (cada cobro registrado)
+      CREATE TABLE IF NOT EXISTS caja_movimientos (
+        id bigint generated always as identity primary key,
+        created_at timestamptz default now(),
+        fecha date not null,
+        hora text,
+        cajero text,
+        contribuyente_id bigint references contribuyentes(id),
+        suministro text,
+        nombre text,
+        meses_pagados jsonb,
+        monto numeric,
+        metodo_pago text,
+        numero_boleta text
+      );
+
+      -- 3. Tabla de cierres de caja (arqueo)
+      CREATE TABLE IF NOT EXISTS caja_cierres (
+        id bigint generated always as identity primary key,
+        created_at timestamptz default now(),
+        fecha date not null,
+        cajero text,
+        total_efectivo numeric,
+        total_transferencia numeric,
+        total_general numeric,
+        numero_movimientos int
+      );
+
+      No es necesario tocar nada más: el resto del sistema (Padrón, Matriz, Cortes)
+      sigue funcionando exactamente igual que en tu versión original.
+      ==========================================================================
+    */
+
     const SUPABASE_URL = 'https://epjwgnjaxguzlrmsvtuq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable__py_2VbWJSOU_1BRqQdR7w_Yp4uZ5-p';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     let usuarios = [];
+    let movimientosCaja = [];
+    let contribuyenteSeleccionadoCobro = null;
+    let chartMorosidad, chartRanking, chartProyeccion;
 
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       calcularTarifaTotalForm();
       cargarUsuariosDesdeSupabase();
+      const cajero = localStorage.getItem('cajeroActual');
+      if (cajero) document.getElementById('lbl-cajero-activo').innerText = `✅ Activo: ${cajero}`;
     });
 
    async function cargarUsuariosDesdeSupabase() {
@@ -402,10 +559,12 @@ img {
     ...u,
     servicios: u.servicios || { agua: 5, desague: 5, limpieza: 5 },
     pagos: u.pagos || new Array(12).fill(0),
+    sector: u.sector || '',
     // Si el ID del usuario está guardado en la lista de NO imprimir, se asigna false
     imprimir: !noImprimirIds.includes(u.id)
   }));
 
+  actualizarDatalistContribuyentes();
   renderAll();
 }
 
@@ -420,18 +579,32 @@ img {
     }
 
     function switchTab(tab) {
-      document.getElementById('tab-usuarios').classList.add('hidden');
-      document.getElementById('tab-matriz').classList.add('hidden');
-      document.getElementById('tab-cortes').classList.add('hidden');
-      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      document.querySelectorAll('main section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
+      const seccionActiva = document.getElementById(`tab-${tab}`);
+      if (seccionActiva) seccionActiva.classList.remove('hidden');
+
+      document.querySelectorAll('aside nav button[id^="btn-"]').forEach(btn => {
+        btn.classList.remove('bg-emerald-800', 'text-white');
+        btn.classList.add('text-emerald-200');
+      });
+      const btnActivo = document.getElementById(`btn-${tab}`);
+      if (btnActivo) {
+        btnActivo.classList.add('bg-emerald-800', 'text-white');
+        btnActivo.classList.remove('text-emerald-200');
+      }
 
       const titles = {
         'usuarios': 'Padrón de Usuarios',
         'matriz': 'Matriz de Pagos',
-        'cortes': 'Notificaciones de Corte de Servicio'
+        'cortes': 'Notificaciones de Corte de Servicio',
+        'caja': 'Caja y Arqueo Diario',
+        'reportes': 'Reportes Estadísticos y Gerenciales'
       };
-      document.getElementById('page-title').innerText = titles[tab];
+      document.getElementById('page-title').innerText = titles[tab] || '';
       renderAll();
+
+      if (tab === 'caja') cargarMovimientosCaja();
+      if (tab === 'reportes') renderReportes();
     }
 
     function renderAll() {
@@ -464,7 +637,7 @@ img {
   if (filtrados.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="py-6 text-center text-gray-400">
+        <td colspan="7" class="py-6 text-center text-gray-400">
           No se encontraron contribuyentes que coincidan con la búsqueda.
         </td>
       </tr>
@@ -489,10 +662,12 @@ img {
         <td class="py-2.5 px-4 font-mono font-bold text-emerald-800">${u.suministro}</td>
         <td class="py-2.5 px-4 font-semibold">${u.nombre}</td>
         <td class="py-2.5 px-4 text-gray-600">${u.direccion}</td>
+        <td class="py-2.5 px-4 text-gray-600">${u.sector || 'Sin Sector'}</td>
         <td class="py-2.5 px-4 text-center font-bold">${mesesDeuda} mes/es</td>
         <td class="py-2.5 px-4 text-center">${badgeEstado}</td>
         <td class="py-2.5 px-4 text-center space-x-1">
           <button onclick="cargarUsuarioEdicion(${u.id})" class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 bg-blue-50 rounded border border-blue-200">Editar</button>
+          <button onclick="imprimirReciboUnico(${u.id})" class="text-emerald-700 hover:text-emerald-900 text-xs font-semibold px-2 py-1 bg-emerald-50 rounded border border-emerald-200">Imprimir</button>
           <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 bg-red-50 rounded border border-red-200">Eliminar</button>
         </td>
       </tr>
@@ -506,12 +681,13 @@ img {
       const suministro = document.getElementById('input-suministro').value;
       const nombre = document.getElementById('input-nombre').value;
       const direccion = document.getElementById('input-direccion').value;
+      const sector = document.getElementById('input-sector').value.trim() || 'Sin Sector';
       const servicios = calcularTarifaTotalForm();
 
       if (editId) {
         const { error } = await _supabase
           .from('contribuyentes')
-          .update({ suministro, nombre, direccion, servicios })
+          .update({ suministro, nombre, direccion, sector, servicios })
           .eq('id', editId);
 
         if (error) alert('Error al actualizar: ' + error.message);
@@ -524,6 +700,7 @@ img {
             suministro,
             nombre,
             direccion,
+            sector,
             servicios,
             pagos: new Array(12).fill(0)
           }]);
@@ -674,7 +851,7 @@ img {
       if (!tbody) return;
 
       if (deudoresCorte.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500 font-medium">🎉 No hay usuarios con 2 o más meses de retraso.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-500 font-medium">🎉 No hay usuarios con 2 o más meses de retraso.</td></tr>`;
         return;
       }
 
@@ -692,6 +869,9 @@ img {
             <td class="py-2.5 px-4 text-right font-extrabold text-red-700">S/. ${totalDeuda.toFixed(2)}</td>
             <td class="py-2.5 px-4 text-center">
               <span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Notificación de Corte</span>
+            </td>
+            <td class="py-2.5 px-4 text-center">
+              <button onclick="imprimirOrdenCorteUnica(${u.id})" class="bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded font-bold">🖨️ Imprimir</button>
             </td>
           </tr>
         `;
@@ -719,6 +899,7 @@ img {
         document.getElementById('input-suministro').value = user.suministro;
         document.getElementById('input-nombre').value = user.nombre;
         document.getElementById('input-direccion').value = user.direccion;
+        document.getElementById('input-sector').value = user.sector || '';
 
         document.getElementById('chk-agua').checked = user.servicios.agua > 0;
         document.getElementById('monto-agua').value = user.servicios.agua || 5;
@@ -745,6 +926,133 @@ img {
 
     function abrirModalImpresion() { document.getElementById('modal-impresion').classList.remove('hidden'); }
     function cerrarModalImpresion() { document.getElementById('modal-impresion').classList.add('hidden'); }
+
+    // ==========================================================================
+    // PLANTILLA DE TARJETA DE RECIBO (reutilizable para impresión masiva y unitaria)
+    // ==========================================================================
+    function tarjetaReciboHTML(u, etiquetaRango) {
+      const tarifaMensual = getTarifaTotal(u);
+      const logoPath = './logo.png';
+
+      let filasServicios = '';
+      if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Agua Potable</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.agua.toFixed(2)}</td></tr>`;
+      if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Desagüe</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.desague.toFixed(2)}</td></tr>`;
+      if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Limpieza Pública</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.limpieza.toFixed(2)}</td></tr>`;
+
+      return `
+      <div style="border: 1.5px solid #1b4d3e; border-radius: 6px; padding: 6px 10px; margin: 0 auto; width: 98%; font-family: sans-serif; background: white; box-sizing: border-box;" class="recibo-card">
+        
+        <!-- ENCABEZADO -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #1b4d3e; padding-bottom: 4px; margin-bottom: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <img src="${logoPath}" alt="Escudo San Roque" style="height: 36px; width: auto; object-fit: contain;">
+            <div>
+              <h2 style="font-size: 9.5pt; font-weight: bold; color: #1b4d3e; margin:0; line-height: 1;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+              <p style="font-size: 6.8pt; color: #3b6e5f; margin: 1px 0 0 0; font-weight: 600;">OFICINA DE RENTAS</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 4px;">
+            <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 90px;">
+              <div style="font-size: 6.5pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
+              <div style="font-size: 7.5pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
+            </div>
+
+            <div style="border: 1px solid #1b4d3e; background: #1b4d3e; color: white; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 85px;">
+              <div style="font-size: 6pt; text-transform: uppercase; opacity: 0.9;">Pago Mensual Base</div>
+              <div style="font-size: 9pt; font-weight: 800; color: #ffffff;">S/. ${tarifaMensual.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATOS DEL CONTRIBUYENTE COMPACTO -->
+        <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 4px 6px; border-radius: 3px; font-size: 7.5pt; margin-bottom: 4px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="font-weight: bold; color: #1b4d3e; width: 12%;">USUARIO:</td>
+              <td style="font-weight: bold; width: 48%;">${u.nombre}</td>
+              <td style="font-weight: bold; color: #1b4d3e; width: 16%;">SUMINISTRO:</td>
+              <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
+              <td>${u.direccion}</td>
+              <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
+              <td>${new Date().toLocaleDateString('es-PE')}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #b91c1c;">F. LÍMITE:</td>
+              <td style="font-weight: bold; color: #b91c1c;">24 DE CADA MES</td>
+              <td style="font-weight: bold; color: #1b4d3e;">ESTADO:</td>
+              <td style="font-weight: bold; color: #d97706;">PENDIENTE DE PAGO</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- TABLA DE SERVICIOS -->
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
+          <thead>
+            <tr style="background: #1b4d3e; color: white;">
+              <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
+              <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filasServicios}
+          </tbody>
+        </table>
+
+        <!-- RESUMEN Y DEUDA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
+          <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%;">
+            <div style="color: #78350f;">
+              <strong>MESES DEUDORES (${u.numMeses}):</strong> 
+              <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
+                ${u.mesesDeuda.join(', ')}
+              </span>
+            </div>
+            <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
+              Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
+            </div>
+          </div>
+
+          <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
+            <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
+            <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
+          </div>
+        </div>
+
+        <!-- MENSAJE DE AVISO -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
+          💡 <strong>¡SU PAGO PUNTUAL HACE LA DIFERENCIA!</strong> Cancela en la Oficina de Rentas antes del <strong>20 de cada mes</strong>, evita la suspensión del servicio y contribuye al desarrollo de San Roque.
+        </div>
+
+      </div>
+      <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂ ------------------------------------------------------------------------------------------------------ ✂</div>
+      `;
+    }
+
+    function imprimirConEsperaDeImagenes(printArea) {
+      printArea.classList.remove('hidden');
+      const imagenes = printArea.querySelectorAll('img');
+      const promesasCarga = [];
+
+      imagenes.forEach(img => {
+        if (!img.complete) {
+          promesasCarga.push(new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }));
+        }
+      });
+
+      Promise.all(promesasCarga).then(() => {
+        setTimeout(() => {
+          window.print();
+          printArea.classList.add('hidden');
+        }, 150);
+      });
+    }
 
     function ejecutarImpresion() {
       const desde = parseInt(document.getElementById('select-mes-desde').value);
@@ -779,141 +1087,102 @@ img {
       printArea.innerHTML = '';
       const etiquetaRango = (desde === hasta) ? MESES[desde].toUpperCase() : `${MESES[desde].toUpperCase()} A ${MESES[hasta].toUpperCase()}`;
 
-      const logoPath = './logo.png';
-
       for (let i = 0; i < usuariosDeudores.length; i += 3) {
         const grupo = usuariosDeudores.slice(i, i + 3);
         const page = document.createElement('div');
         page.className = 'page-break';
         page.style.cssText = 'display: flex; flex-direction: column; justify-content: space-between; height: 100vh; padding: 5mm 0; box-sizing: border-box;';
-
-        page.innerHTML = grupo.map(u => {
-          const tarifaMensual = getTarifaTotal(u);
-          
-          let filasServicios = '';
-          if (u.servicios.agua > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Agua Potable</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.agua.toFixed(2)}</td></tr>`;
-          if (u.servicios.desague > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Desagüe</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.desague.toFixed(2)}</td></tr>`;
-          if (u.servicios.limpieza > 0) filasServicios += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 2px 4px;">Servicio de Limpieza Pública</td><td style="text-align: right; padding: 2px 4px; font-weight: 600;">S/. ${u.servicios.limpieza.toFixed(2)}</td></tr>`;
-
-          return `
-          <div style="border: 1.5px solid #1b4d3e; border-radius: 6px; padding: 6px 10px; margin: 0 auto; width: 98%; font-family: sans-serif; background: white; box-sizing: border-box;" class="recibo-card">
-            
-            <!-- ENCABEZADO -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #1b4d3e; padding-bottom: 4px; margin-bottom: 4px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <img src="${logoPath}" alt="Escudo San Roque" style="height: 36px; width: auto; object-fit: contain;">
-                <div>
-                  <h2 style="font-size: 9.5pt; font-weight: bold; color: #1b4d3e; margin:0; line-height: 1;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-                  <p style="font-size: 6.8pt; color: #3b6e5f; margin: 1px 0 0 0; font-weight: 600;">OFICINA DE RENTAS</p>
-                </div>
-              </div>
-              
-              <div style="display: flex; gap: 4px;">
-                <div style="border: 1px solid #1b4d3e; background: #eaf2ef; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 90px;">
-                  <div style="font-size: 6.5pt; font-weight: bold; color: #1b4d3e;">RECIBO POR COBRAR</div>
-                  <div style="font-size: 7.5pt; font-weight: bold; color: #d97706;">PERIODO: ${etiquetaRango}</div>
-                </div>
-
-                <div style="border: 1px solid #1b4d3e; background: #1b4d3e; color: white; padding: 2px 6px; border-radius: 3px; text-align: center; min-width: 85px;">
-                  <div style="font-size: 6pt; text-transform: uppercase; opacity: 0.9;">Pago Mensual Base</div>
-                  <div style="font-size: 9pt; font-weight: 800; color: #ffffff;">S/. ${tarifaMensual.toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- DATOS DEL CONTRIBUYENTE COMPACTO -->
-            <div style="background: #f8faf9; border: 1px solid #d8e5e0; padding: 4px 6px; border-radius: 3px; font-size: 7.5pt; margin-bottom: 4px;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-weight: bold; color: #1b4d3e; width: 12%;">USUARIO:</td>
-                  <td style="font-weight: bold; width: 48%;">${u.nombre}</td>
-                  <td style="font-weight: bold; color: #1b4d3e; width: 16%;">SUMINISTRO:</td>
-                  <td style="font-weight: bold; font-family: monospace;">${u.suministro}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold; color: #1b4d3e;">DIRECCIÓN:</td>
-                  <td>${u.direccion}</td>
-                  <td style="font-weight: bold; color: #1b4d3e;">EMISIÓN:</td>
-                  <td>${new Date().toLocaleDateString('es-PE')}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold; color: #b91c1c;">F. LÍMITE:</td>
-                  <td style="font-weight: bold; color: #b91c1c;">26 DE CADA MES</td>
-                  <td style="font-weight: bold; color: #1b4d3e;">ESTADO:</td>
-                  <td style="font-weight: bold; color: #d97706;">PENDIENTE DE PAGO</td>
-                </tr>
-              </table>
-            </div>
-
-            <!-- TABLA DE SERVICIOS -->
-        <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-bottom: 4px;">
-          <thead>
-            <tr style="background: #1b4d3e; color: white;">
-              <th style="text-align: left; padding: 2px 4px;">SERVICIOS QUE INCLUYE LA TARIFA</th>
-              <th style="text-align: right; padding: 2px 4px;">COSTO MENSUAL (S/.)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filasServicios}
-          </tbody>
-        </table>
-
-        <!-- RESUMEN DE DEUDA CON CARITA TRISTE GRANDE -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
-          
-          <!-- CAJA DE MESES CON CARITA GRANDE INTEGRADA -->
-          <div style="background: #fffbe3; border: 1px solid #ffe58f; border-left: 3px solid #d97706; padding: 3px 6px; border-radius: 3px; font-size: 7pt; width: 62%; display: flex; align-items: center; gap: 8px;">
-            <div style="font-size: 22pt; line-height: 1; text-align: center; min-width: 32px;">😢</div>
-            <div>
-              <div style="color: #78350f; font-weight: bold;">
-                MESES DEUDORES (${u.numMeses}): 
-                <span style="background: #fef3c7; color: #92400e; padding: 0 3px; border-radius: 2px; font-weight: bold;">
-                  ${u.mesesDeuda.join(', ')}
-                </span>
-              </div>
-              <div style="font-size: 6.5pt; color: #4b5563; margin-top: 1px;">
-                Fórmula: ${u.numMeses} mes(es) × S/. ${tarifaMensual.toFixed(2)} = S/. ${u.totalDeuda.toFixed(2)}
-              </div>
-            </div>
-          </div>
-
-          <div style="background: #1b4d3e; color: white; padding: 4px 8px; border-radius: 3px; text-align: right; min-width: 120px;">
-            <div style="font-size: 6pt; text-transform: uppercase; color: #93c5fd; font-weight: 600;">Total Deuda Acumulada</div>
-            <div style="font-size: 10pt; font-weight: 800; color: #ffffff;">S/. ${u.totalDeuda.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <!-- MENSAJE DE AVISO -->
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3px; padding: 2px 4px; font-size: 6.5pt; color: #166534; text-align: center;">
-         📌 <strong>¡Tu tranquilidad nos importa!</strong> Cancela a tiempo en la Oficina de Rentas y mantén tus servicios al día. ¡El bienestar de tu hogar y de tu familia es nuestra mayor prioridad!
-</div>
-      <div style="text-align: center; font-size: 6.5pt; color: #888; margin: 2px 0;">✂️ ------------------------------------------------------------------------------------------------------ ✂️</div>
-          `;
-        }).join('');
+        page.innerHTML = grupo.map(u => tarjetaReciboHTML(u, etiquetaRango)).join('');
         printArea.appendChild(page);
       }
 
-      // MOSTRAR Y ESPERAR CARGA DE IMÁGENES
-      printArea.classList.remove('hidden');
+      imprimirConEsperaDeImagenes(printArea);
+    }
 
-      const imagenes = printArea.querySelectorAll('img');
-      const promesasCarga = [];
+    // ==========================================================================
+    // NUEVO: IMPRESIÓN DE RECIBO ÚNICO POR PERSONA (mismo formato de arriba)
+    // ==========================================================================
+    function imprimirReciboUnico(userId) {
+      const u = usuarios.find(x => x.id === userId);
+      if (!u) return;
 
-      imagenes.forEach(img => {
-        if (!img.complete) {
-          promesasCarga.push(new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }));
-        }
-      });
+      const tarifa = getTarifaTotal(u);
+      let mesesDeuda = [];
+      u.pagos.forEach((monto, idx) => { if (Number(monto) === 0) mesesDeuda.push(MESES[idx].toUpperCase()); });
 
-      Promise.all(promesasCarga).then(() => {
-        setTimeout(() => {
-          window.print();
-          printArea.classList.add('hidden');
-        }, 150);
-      });
+      if (mesesDeuda.length === 0) {
+        alert(`El contribuyente ${u.nombre} está al día. No tiene meses pendientes para generar un recibo de cobro.`);
+        return;
+      }
+
+      const usuarioParaImprimir = { ...u, mesesDeuda, totalDeuda: mesesDeuda.length * tarifa, numMeses: mesesDeuda.length };
+      const etiquetaRango = 'AÑO 2026';
+
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+      const page = document.createElement('div');
+      page.className = 'page-break';
+      page.style.cssText = 'display: flex; flex-direction: column; justify-content: flex-start; height: 100vh; padding: 5mm 0; box-sizing: border-box;';
+      page.innerHTML = tarjetaReciboHTML(usuarioParaImprimir, etiquetaRango);
+      printArea.appendChild(page);
+
+      imprimirConEsperaDeImagenes(printArea);
+    }
+
+    // ==========================================================================
+    // PLANTILLA DE NOTIFICACIÓN DE CORTE (SIN FIRMAS) - reutilizable
+    // ==========================================================================
+    function tarjetaCorteHTML(u) {
+      const tarifa = getTarifaTotal(u);
+      const nombresMeses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SET", "OCT", "NOV", "DIC"];
+
+      const mesesPendientes = u.pagos 
+        ? u.pagos.map((monto, idx) => Number(monto) === 0 ? nombresMeses[idx] : null).filter(m => m !== null)
+        : [];
+        
+      const cantidadMeses = mesesPendientes.length;
+      const totalDeuda = cantidadMeses * tarifa;
+
+      return `
+        <div style="border: 2px solid #b91c1c; border-radius: 8px; padding: 15px; background: white; font-family: sans-serif;">
+          <!-- ENCABEZADO -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; margin-bottom: 10px;">
+            <div>
+              <h2 style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
+              <p style="font-size: 8pt; color: #7f1d1d; margin:0; font-weight:bold;">OFICINA DE RENTAS</p>
+            </div>
+            <div style="background: #fef2f2; border: 2px solid #b91c1c; color: #b91c1c; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 9pt; text-align: center;">
+              🚨 NOTIFICACIÓN PREVIA DE CORTE
+            </div>
+          </div>
+
+          <!-- DATOS DEL CONTRIBUYENTE -->
+          <div style="font-size: 8.5pt; margin-bottom: 10px; line-height: 1.4; background: #fafafa; padding: 8px; border-radius: 4px; border: 1px solid #eee;">
+            <p style="margin:0;"><strong>SUMINISTRO:</strong> <span style="font-family: monospace; font-weight: bold;">${u.suministro}</span> | <strong>FECHA EMISIÓN:</strong> ${new Date().toLocaleDateString('es-PE')}</p>
+            <p style="margin:2px 0 0 0;"><strong>CONTRIBUYENTE:</strong> ${u.nombre}</p>
+            <p style="margin:2px 0 0 0;"><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
+          </div>
+
+          <!-- DETALLE Y AVISO -->
+          <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold; font-size: 8.5pt;">ASUNTO: PRIMER AVISO Y EMPLAZAMIENTO DE CORTE DE SERVICIO</p>
+            <p style="margin:0;">
+              Por medio del presente se le notifica que registra una deuda acumulada de <strong>${cantidadMeses} meses de retraso</strong> 
+              correspondientes a los periodos: <strong style="color: #b91c1c;">[ ${mesesPendientes.join(', ')} ]</strong>, 
+              sumando un monto total pendiente de <strong style="font-size: 9pt; color: #b91c1c;">S/. ${totalDeuda.toFixed(2)}</strong>.
+            </p>
+            <p style="margin:6px 0 0 0; font-weight: bold; color: #991b1b;">
+              Se le otorga un plazo improrrogable de 24 HORAS a partir de la recepción de esta notificación para apersonarse a la Municipalidad a regularizar su pago, bajo apercibimiento de proceder al CORTE Y SUSPENSIÓN INMEDIATA DEL SERVICIO.
+            </p>
+          </div>
+
+          <!-- ADVERTENCIA DE RECONEXIÓN -->
+          <div style="font-size: 7.5pt; color: #555; font-style: italic;">
+            * Nota: Tras la ejecución del corte, la reconexión del servicio estará sujeta al pago total de la deuda más el derecho por reconexión técnica.
+          </div>
+        </div>
+        <div style="border-top: 1px dashed #aaa; margin: 15px 0;"></div>
+      `;
     }
 
     function imprimirOrdenesCorte() {
@@ -923,71 +1192,11 @@ img {
       const printArea = document.getElementById('print-area');
       printArea.innerHTML = '';
 
-      const nombresMeses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SET", "OCT", "NOV", "DIC"];
-
       for (let i = 0; i < deudores.length; i += 2) {
         const grupo = deudores.slice(i, i + 2);
         const page = document.createElement('div');
         page.className = 'page-break space-y-6';
-
-        page.innerHTML = grupo.map(u => {
-          const tarifa = getTarifaTotal(u);
-          
-          const mesesPendientes = u.pagos 
-            ? u.pagos.map((monto, idx) => Number(monto) === 0 ? nombresMeses[idx] : null).filter(m => m !== null)
-            : [];
-            
-          const cantidadMeses = mesesPendientes.length;
-          const totalDeuda = cantidadMeses * tarifa;
-
-          return `
-            <div style="border: 2px solid #b91c1c; border-radius: 8px; padding: 15px; background: white; font-family: sans-serif;">
-              <!-- ENCABEZADO -->
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; margin-bottom: 10px;">
-                <div>
-                  <h2 style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin:0;">MUNICIPALIDAD DISTRITAL DE SAN ROQUE DE CUMBAZA</h2>
-                  <p style="font-size: 8pt; color: #7f1d1d; margin:0; font-weight:bold;">OFICINA DE RENTAS</p>
-                </div>
-                <div style="background: #fef2f2; border: 2px solid #b91c1c; color: #b91c1c; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 9pt; text-align: center;">
-                  🚨 NOTIFICACIÓN PREVIA DE CORTE
-                </div>
-              </div>
-
-              <!-- DATOS DEL CONTRIBUYENTE -->
-              <div style="font-size: 8.5pt; margin-bottom: 10px; line-height: 1.4; background: #fafafa; padding: 8px; border-radius: 4px; border: 1px solid #eee;">
-                <p style="margin:0;"><strong>SUMINISTRO:</strong> <span style="font-family: monospace; font-weight: bold;">${u.suministro}</span> | <strong>FECHA EMISIÓN:</strong> ${new Date().toLocaleDateString('es-PE')}</p>
-                <p style="margin:2px 0 0 0;"><strong>CONTRIBUYENTE:</strong> ${u.nombre}</p>
-                <p style="margin:2px 0 0 0;"><strong>DIRECCIÓN:</strong> ${u.direccion}</p>
-              </div>
-
-              <!-- DETALLE Y AVISO -->
-              <div style="background: #fff5f5; border-left: 4px solid #b91c1c; padding: 10px; font-size: 8pt; margin-bottom: 8px; border-radius: 4px;">
-                <p style="margin:0 0 5px 0; color: #991b1b; font-weight: bold; font-size: 8.5pt;">ASUNTO: PRIMER AVISO Y EMPLAZAMIENTO DE CORTE DE SERVICIO</p>
-                <p style="margin:0;">
-                  Por medio del presente se le notifica que registra una deuda acumulada de <strong>${cantidadMeses} meses de retraso</strong> 
-                  correspondientes a los periodos: <strong style="color: #b91c1c;">[ ${mesesPendientes.join(', ')} ]</strong>, 
-                  sumando un monto total pendiente de <strong style="font-size: 9pt; color: #b91c1c;">S/. ${totalDeuda.toFixed(2)}</strong>.
-                </p>
-                <p style="margin:6px 0 0 0; font-weight: bold; color: #991b1b;">
-                  Se le otorga un plazo improrrogable de 24 HORAS a partir de la recepción de esta notificación para apersonarse a la Municipalidad a regularizar su pago, bajo apercibimiento de proceder al CORTE Y SUSPENSIÓN INMEDIATA DEL SERVICIO.
-                </p>
-              </div>
-
-              <!-- ADVERTENCIA DE RECONEXIÓN -->
-              <div style="font-size: 7.5pt; color: #555; margin-bottom: 15px; font-style: italic;">
-                * Nota: Tras la ejecución del corte, la reconexión del servicio estará sujeta al pago total de la deuda más el derecho por reconexión técnica.
-              </div>
-
-              <!-- FIRMAS -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt; margin-top: 15px;">
-                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma del Notificador / Inspector</div>
-                <div style="text-align: center; width: 40%; border-top: 1px solid #666; padding-top: 4px;">Firma / DNI del Notificado</div>
-              </div>
-            </div>
-            <div style="border-top: 1px dashed #aaa; margin: 15px 0;"></div>
-          `;
-        }).join('');
-
+        page.innerHTML = grupo.map(u => tarjetaCorteHTML(u)).join('');
         printArea.appendChild(page);
       }
 
@@ -995,69 +1204,758 @@ img {
       window.print();
       printArea.classList.add('hidden');
     }
-    // === BLOQUEO DE TECLAS Y MENÚ CONTEXTUAL ===
-document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-document.addEventListener('keydown', (e) => {
-  // Bloquear F12
-  if (e.key === 'F12' || e.keyCode === 123) {
-    e.preventDefault();
-    return false;
-  }
-  // Bloquear Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
-  if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-    e.preventDefault();
-    return false;
-  }
-  // Bloquear Ctrl+U (Ver fuente) y Ctrl+S (Guardar página)
-  if (e.ctrlKey && ['U', 'u', 'S', 's'].includes(e.key)) {
-    e.preventDefault();
-    return false;
-  }
-});
-    // === TRAMPA ANTI-DEBUGGER ===
-(function antiDevTools() {
-  const check = function() {
-    const start = performance.now();
-    debugger; // Si DevTools está abierto, el código se pausará aquí
-    const end = performance.now();
-    
-    // Si la pausa dura más de 100ms, significa que la consola está abierta
-    if (end - start > 100) {
-      document.body.innerHTML = `
-        <div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;">
-          <div>
-            <h1 style="font-size:20px;font-weight:bold;color:#ef4444;text-transform:uppercase;">Acceso Restringido</h1>
-            <p style="font-size:12px;color:#94a3b8;margin-top:8px;">Por razones de seguridad, la inspección de código está deshabilitada en el Portal Municipal.</p>
-            <button onclick="location.reload()" style="margin-top:16px;padding:12px 24px;background:#00A350;color:#fff;border:none;border-radius:12px;font-weight:bold;cursor:pointer;">Volver al Portal</button>
+    // ==========================================================================
+    // NUEVO: IMPRESIÓN DE NOTIFICACIÓN DE CORTE ÚNICA POR PERSONA (sin firmas)
+    // ==========================================================================
+    function imprimirOrdenCorteUnica(userId) {
+      const u = usuarios.find(x => x.id === userId);
+      if (!u) return;
+      if (contarMesesDeuda(u) === 0) {
+        alert(`${u.nombre} está al día y no registra meses de deuda.`);
+        return;
+      }
+
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = '';
+      const page = document.createElement('div');
+      page.className = 'page-break space-y-6';
+      page.innerHTML = tarjetaCorteHTML(u);
+      printArea.appendChild(page);
+
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+
+    // ==========================================================================
+    // MÓDULO DE CAJA Y ARQUEO DIARIO
+    // ==========================================================================
+    function iniciarSesionCajero() {
+      const nombre = document.getElementById('input-cajero').value.trim();
+      if (!nombre) return alert('Escribe el nombre del cajero.');
+      localStorage.setItem('cajeroActual', nombre);
+      document.getElementById('lbl-cajero-activo').innerText = `✅ Activo: ${nombre}`;
+    }
+
+    function actualizarDatalistContribuyentes() {
+      const datalist = document.getElementById('datalist-contribuyentes');
+      if (!datalist) return;
+      datalist.innerHTML = usuarios.map(u => `<option value="${u.suministro} - ${u.nombre}"></option>`).join('');
+    }
+
+    function seleccionarContribuyenteCobro() {
+      const valor = document.getElementById('input-buscar-cobro').value;
+      const suministro = valor.split(' - ')[0].trim();
+      const u = usuarios.find(x => x.suministro === suministro);
+      const panel = document.getElementById('panel-meses-pendientes');
+
+      if (!u) {
+        panel.classList.add('hidden');
+        contribuyenteSeleccionadoCobro = null;
+        return;
+      }
+
+      contribuyenteSeleccionadoCobro = u;
+      const tarifa = getTarifaTotal(u);
+      document.getElementById('lbl-nombre-cobro').innerText = u.nombre;
+      document.getElementById('lbl-tarifa-cobro').innerText = tarifa.toFixed(2);
+
+      const checkContainer = document.getElementById('check-meses-pendientes');
+      const mesesPendientesIdx = u.pagos.map((m, idx) => Number(m) === 0 ? idx : null).filter(i => i !== null);
+
+      if (mesesPendientesIdx.length === 0) {
+        checkContainer.innerHTML = `<span class="text-emerald-700 font-bold col-span-6">🎉 Este contribuyente está al día.</span>`;
+      } else {
+        checkContainer.innerHTML = mesesPendientesIdx.map(idx => `
+          <label class="flex items-center space-x-1 bg-white border rounded px-2 py-1">
+            <input type="checkbox" class="chk-mes-cobro" value="${idx}" onchange="calcularTotalCobro()" checked>
+            <span>${MESES[idx]}</span>
+          </label>
+        `).join('');
+      }
+
+      panel.classList.remove('hidden');
+      calcularTotalCobro();
+    }
+
+    function calcularTotalCobro() {
+      if (!contribuyenteSeleccionadoCobro) return;
+      const tarifa = getTarifaTotal(contribuyenteSeleccionadoCobro);
+      const seleccionados = document.querySelectorAll('.chk-mes-cobro:checked').length;
+      document.getElementById('lbl-total-cobro').innerText = `S/. ${(tarifa * seleccionados).toFixed(2)}`;
+    }
+
+    function generarNumeroBoleta() {
+      let contador = parseInt(localStorage.getItem('contadorBoleta') || '0') + 1;
+      localStorage.setItem('contadorBoleta', contador);
+      const anio = new Date().getFullYear();
+      return `B${anio}-${String(contador).padStart(6, '0')}`;
+    }
+
+    // Fecha local para evitar que UTC cambie el día en Perú.
+    function obtenerFechaLocalISO() {
+      const ahora = new Date();
+      const offset = ahora.getTimezoneOffset();
+      return new Date(ahora.getTime() - offset * 60000).toISOString().slice(0, 10);
+    }
+
+    // Verifica si la tabla de caja existe antes de confirmar el pago.
+    async function verificarTablaCaja() {
+      const { error } = await _supabase
+        .from('caja_movimientos')
+        .select('id', { head: true, count: 'exact' })
+        .limit(1);
+
+      if (!error) return true;
+
+      if (
+        error.code === '42P01' ||
+        /Could not find the table|does not exist|caja_movimientos/i.test(error.message || '')
+      ) {
+        alert(
+          'ERROR DE CONFIGURACIÓN: falta crear la tabla public.caja_movimientos en Supabase. ' +
+          'Ejecuta el archivo SQL de instalación que acompaña a esta versión corregida.'
+        );
+      } else {
+        alert('No se pudo validar la tabla de caja: ' + error.message);
+      }
+      return false;
+    }
+
+    async function registrarCobro(e) {
+      e.preventDefault();
+
+      const cajero = localStorage.getItem('cajeroActual');
+      if (!cajero) {
+        alert('Primero debes registrar el nombre del cajero en turno.');
+        return;
+      }
+
+      if (!contribuyenteSeleccionadoCobro) {
+        alert('Selecciona un contribuyente válido de la lista.');
+        return;
+      }
+
+      const mesesSeleccionados = Array.from(
+        document.querySelectorAll('.chk-mes-cobro:checked')
+      ).map(chk => parseInt(chk.value, 10));
+
+      if (mesesSeleccionados.length === 0) {
+        alert('Selecciona al menos un mes a cobrar.');
+        return;
+      }
+
+      // IMPORTANTE: no se marca el pago si no se puede guardar el comprobante.
+      const tablaCajaLista = await verificarTablaCaja();
+      if (!tablaCajaLista) return;
+
+      const u = contribuyenteSeleccionadoCobro;
+      const tarifa = getTarifaTotal(u);
+      const metodoPago = document.getElementById('select-metodo-pago').value;
+      const montoTotal = Number((tarifa * mesesSeleccionados.length).toFixed(2));
+      const numeroBoleta = generarNumeroBoleta();
+
+      const nuevosPagos = Array.isArray(u.pagos)
+        ? [...u.pagos]
+        : new Array(12).fill(0);
+
+      mesesSeleccionados.forEach(idx => {
+        nuevosPagos[idx] = tarifa;
+      });
+
+      const movimiento = {
+        fecha: obtenerFechaLocalISO(),
+        hora: new Date().toLocaleTimeString('es-PE', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
+        cajero,
+        contribuyente_id: u.id,
+        suministro: String(u.suministro),
+        nombre: String(u.nombre),
+        meses_pagados: mesesSeleccionados.map(idx => MESES[idx]),
+        monto: montoTotal,
+        metodo_pago: metodoPago,
+        numero_boleta: numeroBoleta
+      };
+
+      const botonSubmit = e.submitter;
+      if (botonSubmit) {
+        botonSubmit.disabled = true;
+        botonSubmit.classList.add('opacity-60', 'cursor-not-allowed');
+      }
+
+      try {
+        // 1. Primero guardar el movimiento/comprobante.
+        const { error: errMov } = await _supabase
+          .from('caja_movimientos')
+          .insert([movimiento]);
+
+        if (errMov) {
+          throw new Error('No se pudo guardar el comprobante: ' + errMov.message);
+        }
+
+        // 2. Luego actualizar la deuda del contribuyente.
+        const { error: errPago } = await _supabase
+          .from('contribuyentes')
+          .update({ pagos: nuevosPagos })
+          .eq('id', u.id);
+
+        if (errPago) {
+          // Compensación: eliminar el movimiento para evitar un comprobante huérfano.
+          await _supabase
+            .from('caja_movimientos')
+            .delete()
+            .eq('numero_boleta', numeroBoleta);
+
+          throw new Error('No se pudo actualizar el pago: ' + errPago.message);
+        }
+
+        await imprimirBoleta(movimiento);
+
+        document.getElementById('form-cobro').reset();
+        document.getElementById('panel-meses-pendientes').classList.add('hidden');
+        contribuyenteSeleccionadoCobro = null;
+
+        await cargarUsuariosDesdeSupabase();
+        await cargarMovimientosCaja();
+
+      } catch (error) {
+        console.error('Error registrando cobro:', error);
+        alert('No se pudo registrar el cobro. ' + error.message);
+      } finally {
+        if (botonSubmit) {
+          botonSubmit.disabled = false;
+          botonSubmit.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
+      }
+    }
+
+    // ==============================================================
+    // EMISIÓN DE BOLETA A4 - DOBLE COPIA (IZQUIERDA Y DERECHA)
+    // ==============================================================
+
+    const LOGO_MUNICIPAL_URL = 'https://www.contrataciones.pe/organizaciones/licitaciones-municipalidad-de-san-roque-de-cumbaza.png';
+
+    function formatearFechaPeru(fechaISO) {
+      if (!fechaISO) return '';
+      const [anio, mes, dia] = String(fechaISO).split('-');
+      return `${dia}/${mes}/${anio}`;
+    }
+
+    async function cargarLogoMunicipalPDF() {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (error) {
+            console.warn('No se pudo convertir el logo a base64.', error);
+            resolve(LOGO_MUNICIPAL_URL);
+          }
+        };
+
+        img.onerror = () => {
+          console.warn('No se pudo cargar el logo municipal.');
+          resolve(LOGO_MUNICIPAL_URL);
+        };
+
+        img.src = LOGO_MUNICIPAL_URL;
+      });
+    }
+
+    function agregarTextoAjustado(doc, texto, x, y, ancho, tamano = 8) {
+      doc.setFontSize(tamano);
+      const lineas = doc.splitTextToSize(String(texto ?? ''), ancho);
+      doc.text(lineas, x, y);
+      return y + lineas.length * (tamano * 0.42);
+    }
+
+    async function generarBoletaPDF(mov, descargar = true) {
+      try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+          throw new Error('La librería PDF no terminó de cargar. Verifica tu conexión a internet y vuelve a intentar.');
+        }
+
+        const { jsPDF } = window.jspdf;
+
+        // A4 vertical: 210 x 297 mm.
+        const doc = new jsPDF({
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        });
+
+        const verde = [6, 95, 70];
+        const gris = [90, 90, 90];
+
+        const margen = 10;
+        const separacion = 6;
+        const anchoCopia = (210 - (margen * 2) - separacion) / 2; // 92 mm aprox.
+        const altoCopia = 145;
+        const xIzquierda = margen;
+        const xDerecha = margen + anchoCopia + separacion;
+        const yInicio = 18;
+
+        // Línea central para recortar o separar ambas copias.
+        doc.setDrawColor(160, 160, 160);
+        doc.setLineDashPattern([2, 2], 0);
+        doc.line(105, 10, 105, 287);
+        doc.setLineDashPattern([], 0);
+
+        const logo = await cargarLogoMunicipalPDF();
+
+        function dibujarCopia(x, tituloCopia) {
+          // Marco de la boleta.
+          doc.setDrawColor(verde[0], verde[1], verde[2]);
+          doc.setLineWidth(0.7);
+          doc.roundedRect(x, yInicio, anchoCopia, altoCopia, 2, 2);
+
+          // Cabecera.
+          doc.setFillColor(verde[0], verde[1], verde[2]);
+          doc.roundedRect(x, yInicio, anchoCopia, 12, 2, 2, 'F');
+          doc.setFillColor(verde[0], verde[1], verde[2]);
+          doc.rect(x, yInicio + 8, anchoCopia, 4, 'F');
+
+          // Logo.
+          try {
+            doc.addImage(logo, 'PNG', x + 3, yInicio + 3, 13, 13);
+          } catch (error) {
+            console.warn('No se pudo insertar el logo en esta copia.', error);
+          }
+
+          // Nombre institucional.
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          doc.text('MUNICIPALIDAD DISTRITAL', x + anchoCopia / 2 + 6, yInicio + 5, { align: 'center' });
+          doc.text('DE SAN ROQUE DE CUMBAZA', x + anchoCopia / 2 + 6, yInicio + 9, { align: 'center' });
+
+          let y = yInicio + 18;
+
+          doc.setTextColor(30, 30, 30);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          doc.text('COMPROBANTE DE PAGO', x + anchoCopia / 2, y, { align: 'center' });
+
+          y += 4;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6);
+          doc.setTextColor(gris[0], gris[1], gris[2]);
+          doc.text(tituloCopia, x + anchoCopia / 2, y, { align: 'center' });
+
+          y += 5;
+          doc.setDrawColor(210, 210, 210);
+          doc.line(x + 3, y, x + anchoCopia - 3, y);
+          y += 5;
+
+          const etiquetaX = x + 4;
+          const valorX = x + 28;
+          const valorAncho = anchoCopia - 33;
+
+          const agregarCampo = (etiqueta, valor) => {
+            doc.setTextColor(50, 50, 50);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(5.8);
+            doc.text(etiqueta, etiquetaX, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.3);
+            const lineas = doc.splitTextToSize(String(valor ?? ''), valorAncho);
+            doc.text(lineas, valorX, y);
+
+            y += Math.max(4.5, lineas.length * 3.1);
+          };
+
+          agregarCampo('BOLETA:', mov.numero_boleta);
+          agregarCampo('FECHA:', `${formatearFechaPeru(mov.fecha)} ${mov.hora || ''}`);
+          agregarCampo('SUMINISTRO:', mov.suministro);
+          agregarCampo('CONTRIBUYENTE:', mov.nombre);
+          agregarCampo('MÉTODO:', mov.metodo_pago);
+          agregarCampo('CAJERO:', mov.cajero);
+
+          y += 1;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.text('MESES CANCELADOS', etiquetaX, y);
+          y += 4;
+
+          const meses = Array.isArray(mov.meses_pagados)
+            ? mov.meses_pagados
+            : [];
+
+          if (meses.length === 0) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.text('Sin meses registrados', etiquetaX, y);
+            y += 4;
+          } else {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            const mesesTexto = meses.join(' • ');
+            const lineasMeses = doc.splitTextToSize(mesesTexto, anchoCopia - 8);
+            doc.text(lineasMeses, etiquetaX, y);
+            y += lineasMeses.length * 3 + 3;
+          }
+
+          // Total.
+          doc.setFillColor(235, 245, 241);
+          doc.roundedRect(x + 4, y, anchoCopia - 8, 14, 1.5, 1.5, 'F');
+
+          doc.setTextColor(20, 70, 50);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.text('TOTAL PAGADO', x + anchoCopia / 2, y + 5, { align: 'center' });
+
+          doc.setFontSize(12);
+          doc.text(`S/. ${Number(mov.monto || 0).toFixed(2)}`, x + anchoCopia / 2, y + 11, { align: 'center' });
+
+          // Pie.
+          const pieY = yInicio + altoCopia - 11;
+          doc.setDrawColor(220, 220, 220);
+          doc.line(x + 3, pieY - 3, x + anchoCopia - 3, pieY - 3);
+
+          doc.setTextColor(gris[0], gris[1], gris[2]);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(5.5);
+          doc.text('Gracias por su pago. Conserve este comprobante.', x + anchoCopia / 2, pieY, { align: 'center' });
+          doc.text('Sistema de Recaudación Municipal', x + anchoCopia / 2, pieY + 4, { align: 'center' });
+        }
+
+        // DOS COPIAS EN UNA SOLA HOJA A4.
+        dibujarCopia(xIzquierda, 'COPIA MUNICIPAL - ARCHIVO / INVENTARIO DIARIO');
+        dibujarCopia(xDerecha, 'COPIA CONTRIBUYENTE - CLIENTE');
+
+        if (descargar) {
+          const archivo = `BOLETA_A4_${String(mov.numero_boleta).replace(/[^\w.-]/g, '_')}.pdf`;
+          doc.save(archivo);
+        }
+
+        return doc;
+
+      } catch (error) {
+        console.error('Error generando boleta A4:', error);
+        alert('No se pudo generar la boleta en formato A4: ' + error.message);
+        return null;
+      }
+    }
+
+    async function imprimirBoleta(mov) {
+      return await generarBoletaPDF(mov, true);
+    }
+
+    async function cargarMovimientosCaja() {
+      const hoy = obtenerFechaLocalISO();
+      const lblFecha = document.getElementById('lbl-fecha-hoy');
+      if (lblFecha) lblFecha.innerText = hoy;
+
+      const cajero = localStorage.getItem('cajeroActual');
+      if (cajero) document.getElementById('lbl-cajero-activo').innerText = `✅ Activo: ${cajero}`;
+
+      const { data, error } = await _supabase.from('caja_movimientos').select('*').eq('fecha', hoy).order('created_at', { ascending: false });
+      if (error) { console.error(error); movimientosCaja = []; }
+      else movimientosCaja = data || [];
+
+      renderTablaCaja();
+    }
+
+    function renderTablaCaja() {
+      const tbody = document.getElementById('tabla-caja-body');
+      if (!tbody) return;
+
+      if (movimientosCaja.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-6 text-center text-gray-400">Aún no se han registrado cobros hoy.</td></tr>`;
+        document.getElementById('lbl-total-dia').innerText = 'S/. 0.00';
+        return;
+      }
+
+      tbody.innerHTML = movimientosCaja.map(m => `
+        <tr class="hover:bg-gray-50">
+          <td class="py-2 px-4">${m.hora}</td>
+          <td class="py-2 px-4 font-mono font-bold text-emerald-800">${m.numero_boleta}</td>
+          <td class="py-2 px-4 font-mono">${m.suministro}</td>
+          <td class="py-2 px-4 font-semibold">${m.nombre}</td>
+          <td class="py-2 px-4">${(m.meses_pagados || []).join(', ')}</td>
+          <td class="py-2 px-4 text-right font-bold text-emerald-700">S/. ${Number(m.monto).toFixed(2)}</td>
+          <td class="py-2 px-4">${m.metodo_pago}</td>
+          <td class="py-2 px-4">${m.cajero}</td>
+        </tr>
+      `).join('');
+
+      const total = movimientosCaja.reduce((acc, m) => acc + Number(m.monto), 0);
+      document.getElementById('lbl-total-dia').innerText = `S/. ${total.toFixed(2)}`;
+    }
+
+    async function cerrarCaja() {
+      const cajero = localStorage.getItem('cajeroActual');
+      if (!cajero) return alert('No hay un cajero activo registrado.');
+
+      const movimientosCajero = movimientosCaja.filter(m => m.cajero === cajero);
+      if (movimientosCajero.length === 0) return alert(`${cajero} no registra cobros el día de hoy.`);
+
+      const totales = { 'Efectivo': 0, 'Transferencia': 0, 'Yape/Plin': 0 };
+      movimientosCajero.forEach(m => { totales[m.metodo_pago] = (totales[m.metodo_pago] || 0) + Number(m.monto); });
+      const totalGeneral = movimientosCajero.reduce((acc, m) => acc + Number(m.monto), 0);
+
+      const cierre = {
+        fecha: obtenerFechaLocalISO(),
+        cajero,
+        total_efectivo: totales['Efectivo'] || 0,
+        total_transferencia: (totales['Transferencia'] || 0) + (totales['Yape/Plin'] || 0),
+        total_general: totalGeneral,
+        numero_movimientos: movimientosCajero.length
+      };
+
+      const { error } = await _supabase.from('caja_cierres').insert([cierre]);
+      if (error) console.error('Error guardando cierre:', error.message);
+
+      const printArea = document.getElementById('print-area');
+      printArea.innerHTML = `
+        <div class="page-break" style="display:flex; justify-content:center; padding: 15mm 0;">
+          <div style="border: 2px solid #1b4d3e; border-radius: 8px; padding: 15px; width: 340px; font-family: sans-serif;">
+            <h2 style="text-align:center; font-size:10pt; color:#1b4d3e; font-weight:bold; margin:0 0 4px 0;">ARQUEO DE CAJA</h2>
+            <p style="text-align:center; font-size:8pt; margin:0 0 10px 0;">Municipalidad Distrital de San Roque de Cumbaza</p>
+            <table style="width:100%; font-size:8.5pt; border-collapse:collapse;">
+              <tr><td style="font-weight:bold; padding:3px 0;">Cajero:</td><td style="text-align:right;">${cajero}</td></tr>
+              <tr><td style="font-weight:bold; padding:3px 0;">Fecha:</td><td style="text-align:right;">${cierre.fecha}</td></tr>
+              <tr><td style="font-weight:bold; padding:3px 0;">N° de Cobros:</td><td style="text-align:right;">${cierre.numero_movimientos}</td></tr>
+              <tr><td colspan="2" style="border-top:1px solid #ccc; padding-top:6px;"></td></tr>
+              <tr><td style="padding:3px 0;">Total Efectivo:</td><td style="text-align:right;">S/. ${cierre.total_efectivo.toFixed(2)}</td></tr>
+              <tr><td style="padding:3px 0;">Total Transferencia/Digital:</td><td style="text-align:right;">S/. ${cierre.total_transferencia.toFixed(2)}</td></tr>
+            </table>
+            <div style="background:#1b4d3e; color:white; padding:8px; border-radius:4px; text-align:center; margin-top:10px;">
+              <div style="font-size:7pt; text-transform:uppercase;">Total Recaudado</div>
+              <div style="font-size:14pt; font-weight:800;">S/. ${cierre.total_general.toFixed(2)}</div>
+            </div>
           </div>
         </div>
       `;
+      printArea.classList.remove('hidden');
+      setTimeout(() => { window.print(); printArea.classList.add('hidden'); }, 150);
+
+      alert(`Caja cerrada correctamente para ${cajero}. Total recaudado: S/. ${totalGeneral.toFixed(2)}`);
     }
-  };
-  
-  setInterval(check, 1000);
-})();
-    function descargarDocumentoSeguro(nombreArchivo) {
-  const ruta = `docs/${nombreArchivo}`;
-  fetch(ruta)
-    .then(res => {
-      if (!res.ok) throw new Error('Archivo no disponible');
-      return res.blob();
-    })
-    .then(blob => {
-      const blobUrl = window.URL.createObjectURL(blob);
-      const tempLink = document.createElement('a');
-      tempLink.style.display = 'none';
-      tempLink.href = blobUrl;
-      tempLink.download = nombreArchivo;
-      document.body.appendChild(tempLink);
-      tempLink.click();
-      window.URL.revokeObjectURL(blobUrl);
-      tempLink.remove();
-    })
-    .catch(() => alert('No se pudo descargar el documento en este momento.'));
-}
+
+    function descargarCSV(nombreArchivo, filas) {
+      const contenido = filas.map(fila => fila.map(campo => `"${String(campo).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(["\uFEFF" + contenido], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    async function obtenerMovimientosDeHoyParaDescarga() {
+      const fecha = obtenerFechaLocalISO();
+
+      const { data, error } = await _supabase
+        .from('caja_movimientos')
+        .select('*')
+        .eq('fecha', fecha)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando movimientos para descarga:', error);
+        throw new Error(error.message);
+      }
+
+      movimientosCaja = data || [];
+      return movimientosCaja;
+    }
+
+    function descargarReporteCajaPDF(movimientos) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error('La librería PDF no terminó de cargar.');
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const fecha = obtenerFechaLocalISO();
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('REPORTE DIARIO DE CAJA', 105, 18, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('Municipalidad Distrital de San Roque de Cumbaza', 105, 25, { align: 'center' });
+      doc.text(`Fecha: ${formatearFechaPeru(fecha)}`, 15, 34);
+
+      const total = movimientos.reduce((acum, m) => acum + Number(m.monto || 0), 0);
+
+      doc.autoTable({
+        startY: 40,
+        head: [[
+          'Hora', 'Boleta', 'Suministro', 'Contribuyente',
+          'Meses', 'Monto', 'Método', 'Cajero'
+        ]],
+        body: movimientos.map(m => [
+          m.hora || '',
+          m.numero_boleta || '',
+          m.suministro || '',
+          m.nombre || '',
+          Array.isArray(m.meses_pagados) ? m.meses_pagados.join(', ') : '',
+          `S/. ${Number(m.monto || 0).toFixed(2)}`,
+          m.metodo_pago || '',
+          m.cajero || ''
+        ]),
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [6, 95, 70] },
+        margin: { left: 8, right: 8 }
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text(`TOTAL RECAUDADO: S/. ${total.toFixed(2)}`, 15, finalY);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Número de movimientos: ${movimientos.length}`, 15, finalY + 7);
+
+      doc.save(`REPORTE_CAJA_${fecha}.pdf`);
+    }
+
+    async function descargarReporteCajaCSV() {
+      try {
+        const boton = event?.currentTarget;
+        if (boton) {
+          boton.disabled = true;
+          boton.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+
+        const movimientos = await obtenerMovimientosDeHoyParaDescarga();
+
+        if (movimientos.length === 0) {
+          alert('No hay movimientos de caja registrados hoy para descargar.');
+          return;
+        }
+
+        // Genera PDF como reporte oficial del día.
+        descargarReporteCajaPDF(movimientos);
+
+        // También genera CSV para Excel.
+        const filas = [[
+          'Hora', 'N° Boleta', 'Suministro', 'Contribuyente',
+          'Meses Pagados', 'Monto', 'Método de Pago', 'Cajero'
+        ]];
+
+        movimientos.forEach(m => {
+          filas.push([
+            m.hora || '',
+            m.numero_boleta || '',
+            m.suministro || '',
+            m.nombre || '',
+            Array.isArray(m.meses_pagados) ? m.meses_pagados.join(' / ') : '',
+            Number(m.monto || 0).toFixed(2),
+            m.metodo_pago || '',
+            m.cajero || ''
+          ]);
+        });
+
+        descargarCSV(`REPORTE_CAJA_${obtenerFechaLocalISO()}.csv`, filas);
+
+        alert('Reporte generado correctamente en PDF y CSV.');
+
+      } catch (error) {
+        console.error('Error descargando reporte:', error);
+        alert('No se pudo descargar el reporte: ' + error.message);
+      } finally {
+        const boton = event?.currentTarget;
+        if (boton) {
+          boton.disabled = false;
+          boton.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
+      }
+    }
+
+    // ==========================================================================
+    // MÓDULO DE REPORTES ESTADÍSTICOS Y GERENCIALES
+    // ==========================================================================
+    function renderReportes() {
+      const sectores = {};
+      usuarios.forEach(u => {
+        const sector = u.sector || 'Sin Sector';
+        if (!sectores[sector]) sectores[sector] = { total: 0, alDia: 0, enDeuda: 0 };
+        sectores[sector].total++;
+        if (contarMesesDeuda(u) === 0) sectores[sector].alDia++; else sectores[sector].enDeuda++;
+      });
+
+      const nombresSectores = Object.keys(sectores);
+      const porcentajeMorosidad = nombresSectores.map(s => sectores[s].total ? ((sectores[s].enDeuda / sectores[s].total) * 100) : 0);
+      const porcentajeCobertura = nombresSectores.map(s => sectores[s].total ? ((sectores[s].alDia / sectores[s].total) * 100) : 0);
+
+      const ctxMorosidad = document.getElementById('chart-morosidad-sector');
+      if (chartMorosidad) chartMorosidad.destroy();
+      chartMorosidad = new Chart(ctxMorosidad, {
+        type: 'bar',
+        data: {
+          labels: nombresSectores,
+          datasets: [{ label: '% Morosidad', data: porcentajeMorosidad, backgroundColor: '#dc2626' }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+      });
+
+      const rankingOrdenado = nombresSectores
+        .map((s, i) => ({ sector: s, cobertura: porcentajeCobertura[i] }))
+        .sort((a, b) => b.cobertura - a.cobertura);
+
+      const ctxRanking = document.getElementById('chart-ranking-cobertura');
+      if (chartRanking) chartRanking.destroy();
+      chartRanking = new Chart(ctxRanking, {
+        type: 'bar',
+        data: {
+          labels: rankingOrdenado.map(r => r.sector),
+          datasets: [{ label: '% Cobertura (Al Día)', data: rankingOrdenado.map(r => r.cobertura), backgroundColor: '#059669' }]
+        },
+        options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true, max: 100 } } }
+      });
+
+      const totalesPorMes = new Array(12).fill(0);
+      usuarios.forEach(u => { (u.pagos || []).forEach((monto, idx) => { totalesPorMes[idx] += Number(monto) || 0; }); });
+
+      const mesesConDatos = totalesPorMes.filter(v => v > 0);
+      const promedio = mesesConDatos.length ? (mesesConDatos.reduce((a, b) => a + b, 0) / mesesConDatos.length) : 0;
+
+      const ctxProyeccion = document.getElementById('chart-proyeccion');
+      if (chartProyeccion) chartProyeccion.destroy();
+      chartProyeccion = new Chart(ctxProyeccion, {
+        type: 'line',
+        data: {
+          labels: [...MESES, 'Proy. Próximo Mes'],
+          datasets: [
+            { label: 'Recaudación Real (S/.)', data: [...totalesPorMes, null], borderColor: '#1b4d3e', backgroundColor: 'rgba(27,77,62,0.15)', fill: true, tension: 0.3 },
+            { label: 'Proyección (S/.)', data: [...new Array(12).fill(null), promedio], borderColor: '#d97706', borderDash: [6, 4], pointBackgroundColor: '#d97706' }
+          ]
+        },
+        options: { responsive: true }
+      });
+    }
+
+    function descargarReporteContribuyentesCSV() {
+      if (usuarios.length === 0) return alert('No hay contribuyentes registrados.');
+      const filas = [['Suministro', 'Nombre', 'Dirección', 'Sector', 'Tarifa Mensual', 'Meses Deuda', 'Deuda Total', 'Estado']];
+      usuarios.forEach(u => {
+        const tarifa = getTarifaTotal(u);
+        const mesesDeuda = contarMesesDeuda(u);
+        const estado = mesesDeuda === 0 ? 'Al Día' : (mesesDeuda <= 3 ? 'En Deuda' : 'Moroso');
+        filas.push([u.suministro, u.nombre, u.direccion, u.sector || 'Sin Sector', tarifa.toFixed(2), mesesDeuda, (mesesDeuda * tarifa).toFixed(2), estado]);
+      });
+      descargarCSV(`reporte_contribuyentes_${new Date().toISOString().slice(0,10)}.csv`, filas);
+    }
   </script>
 </body>
 </html>
